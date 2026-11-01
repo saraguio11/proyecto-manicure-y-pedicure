@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-const API_BASE = 'http://localhost:4000/api';
+// Usar variable de entorno para producción (Vercel) o localhost en local
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const IMAGENES_SERVICIOS = {
   1: '/manicure-tradicional.png',
