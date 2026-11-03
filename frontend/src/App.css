@@ -1,31 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Paleta "Violet Dusk" */
-  --bg-deep: #1d1222;
-  --bg-dark: #26162d;
-  --color-dark-purple: #502d55;
-  --color-mauve: #935073;
-  --color-cream: #f6dbc0;
-  --color-ivory: #f8f4e9;
+  /* Paleta "Royal Violet" con tono brillante (Imágenes 2 & 3 @rarostock) */
+  --royal-neon: #9303C5;       /* Tono brillante vibrante */
+  --royal-violet-1: #520380;   /* Violeta luminoso */
+  --royal-violet-2: #3A025B;   /* Violeta real medio */
+  --royal-violet-3: #220135;   /* Violeta profundo */
+  --royal-violet-4: #1A0129;   /* Violeta noche */
+  --royal-black: #11010C;      /* Negro violeta */
+  --royal-obsidian: #02060E;   /* Fondo noche profundo */
+  --royal-gold: #D4AF37;       /* Acento dorado brillante */
+  --royal-gold-light: #F6DBC0; /* Crema dorado suave */
+  --royal-lavender: #FAF5FC;   /* Lavanda claro para Modo Claro */
 
-  /* Glassmorphism y sombras */
-  --glass-bg: rgba(80, 45, 85, 0.35);
-  --glass-bg-hover: rgba(147, 80, 115, 0.25);
-  --glass-border: rgba(246, 219, 192, 0.18);
-  --glass-border-strong: rgba(246, 219, 192, 0.45);
-  --text-primary: #f8f4e9;
-  --text-secondary: #e2ccb7;
-  --text-muted: rgba(246, 219, 192, 0.65);
-  --gradient-dusk: linear-gradient(135deg, #502d55 0%, #935073 50%, #f6dbc0 100%);
-  --gradient-btn: linear-gradient(135deg, #935073 0%, #ba6a94 100%);
-  --glow-mauve: 0 8px 32px rgba(147, 80, 115, 0.35);
+  /* Mapeo para componentes del sistema */
+  --bg-deep: #02060E;
+  --bg-dark: #11010C;
+  --color-dark-purple: #3A025B;
+  --color-mauve: #9303C5;
+  --color-cream: #F6DBC0;
+  --color-ivory: #F8F4E9;
 
-  /* Estilos específicos del Login Desert Pink */
-  --desert-bg: #d89fa9;
-  --desert-card: #e4b8bf;
-  --desert-text: #6b3346;
-  --desert-line: #a65e74;
+  /* Glassmorphism y sombras con resplandor neón */
+  --glass-bg: rgba(58, 2, 91, 0.45);
+  --glass-bg-hover: rgba(147, 3, 197, 0.35);
+  --glass-border: rgba(147, 3, 197, 0.3);
+  --glass-border-strong: rgba(147, 3, 197, 0.65);
+  --text-primary: #F8F4E9;
+  --text-secondary: #E9D5F5;
+  --text-muted: rgba(246, 219, 192, 0.7);
+  --gradient-dusk: linear-gradient(135deg, #1A0129 0%, #3A025B 50%, #9303C5 100%);
+  --gradient-btn: linear-gradient(135deg, #9303C5 0%, #520380 100%);
+  --glow-mauve: 0 8px 32px rgba(147, 3, 197, 0.45);
+
+  /* Estilos específicos del Login Glassmorphism (Imagen 4) */
+  --login-glass-bg: rgba(225, 205, 235, 0.55);
+  --login-card-bg: linear-gradient(135deg, rgba(58, 2, 91, 0.6) 0%, rgba(17, 1, 12, 0.75) 100%);
+  --login-text: #3A025B;
+  --login-line: rgba(58, 2, 91, 0.35);
 }
 
 * {
@@ -1007,18 +1019,38 @@ body {
   z-index: 1000;
 }
 
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at center, rgba(82, 3, 128, 0.45) 0%, rgba(2, 6, 14, 0.88) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Contenedor Flotante Estilo Glassmorphism (Imagen 4) */
 .desert-card-container {
   display: flex;
   width: 90%;
   max-width: 820px;
   min-height: 480px;
-  background: linear-gradient(135deg, #d39fa7 0%, #b87c88 100%);
+  background: linear-gradient(135deg, rgba(82, 3, 128, 0.28) 0%, rgba(18, 1, 26, 0.5) 100%);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
   border-radius: 36px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(184, 124, 136, 0.25);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 50px rgba(147, 3, 197, 0.3);
   overflow: hidden;
   position: relative;
   animation: desertIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 12px;
+  gap: 12px;
 }
 
 @keyframes desertIn {
@@ -1028,35 +1060,52 @@ body {
 
 .desert-close-btn {
   position: absolute;
-  top: 1.2rem;
-  right: 1.4rem;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
+  top: 1.4rem;
+  right: 1.6rem;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   font-size: 1.1rem;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   cursor: pointer;
-  color: #5a2638;
+  color: #3A025B;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: 20;
   transition: all 0.2s;
 }
 
 .desert-close-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: #FFFFFF;
+  color: #9303C5;
+  transform: rotate(90deg);
 }
 
-/* Panel Izquierdo: Imagen */
+/* Panel Izquierdo: Tarjeta con imagen oscura y resplandor base (Imagen 4) */
 .desert-image-panel {
   flex: 1.05;
-  margin: 16px;
   border-radius: 28px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 25px rgba(90, 38, 56, 0.2);
+  background: #02060E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.desert-image-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 10%;
+  width: 80%;
+  height: 90px;
+  background: radial-gradient(ellipse at center, rgba(147, 3, 197, 0.65) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 3;
 }
 
 .desert-image-panel img {
@@ -1064,8 +1113,9 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  background-color: #0b060d;
   display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .desert-image-overlay {
@@ -1074,47 +1124,59 @@ body {
   left: 0;
   width: 100%;
   padding: 1.5rem;
-  background: linear-gradient(to top, rgba(90, 38, 56, 0.8), transparent);
+  background: linear-gradient(to top, rgba(2, 6, 14, 0.85) 0%, transparent 100%);
+  z-index: 2;
 }
 
 .desert-image-brand {
-  color: #fff3f5;
+  color: #F8F4E9;
   font-family: 'Playfair Display', serif;
   font-size: 0.95rem;
   letter-spacing: 2px;
   font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
-/* Panel Derecho: Formulario */
+/* Panel Derecho: Superficie de vidrio esmerilado suave (Imagen 4) */
 .desert-form-panel {
-  flex: 1.2;
-  padding: 3rem 2.8rem 2.5rem 2.2rem;
+  flex: 1.25;
+  padding: 2.8rem 2.6rem 2.2rem 2.6rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  font-family: 'Outfit', sans-serif;
-  color: #5a2638;
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+  color: #3A025B;
+  background: linear-gradient(145deg, rgba(240, 225, 248, 0.75) 0%, rgba(215, 190, 230, 0.6) 100%);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.7);
 }
 
 .desert-title {
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: #5a2638;
-  margin: 0 0 1.8rem;
+  font-size: 2.3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #3A025B 0%, #7A245C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 1.6rem;
   text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .desert-subtitle {
   text-align: center;
   font-size: 0.9rem;
-  color: #7d3c52;
-  margin: -1.2rem 0 1.5rem;
+  color: #520380;
+  margin: -1rem 0 1.4rem;
+  font-weight: 600;
 }
 
 .desert-form {
   display: flex;
   flex-direction: column;
-  gap: 1.4rem;
+  gap: 1.3rem;
 }
 
 .desert-input-group {
@@ -1123,17 +1185,23 @@ body {
 }
 
 .desert-input-group label {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #5a2638;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #4A1238;
   margin-bottom: 0.2rem;
+  letter-spacing: 0.2px;
 }
 
 .desert-input-wrap {
   position: relative;
   display: flex;
   align-items: center;
-  border-bottom: 1.8px solid #995368;
+  border-bottom: 1.8px solid rgba(74, 18, 56, 0.35);
+  transition: border-color 0.2s;
+}
+
+.desert-input-wrap:focus-within {
+  border-bottom-color: #9303C5;
 }
 
 .desert-input-wrap input {
@@ -1141,75 +1209,79 @@ body {
   background: transparent;
   border: none;
   outline: none;
-  padding: 0.5rem 1.8rem 0.5rem 0;
+  padding: 0.5rem 2rem 0.5rem 0;
   font-size: 1rem;
-  color: #3f1926;
-  font-weight: 500;
+  color: #220135;
+  font-weight: 600;
   font-family: inherit;
+}
+
+.desert-input-wrap input::placeholder {
+  color: rgba(74, 18, 56, 0.45);
 }
 
 .desert-input-wrap .input-icon {
   position: absolute;
   right: 0.2rem;
-  color: #7d3c52;
-  font-size: 1.05rem;
+  color: #520380;
+  font-size: 1.1rem;
   pointer-events: none;
 }
 
 .desert-error {
-  background: rgba(180, 40, 60, 0.15);
-  border: 1px solid #a63148;
-  color: #610e1e;
+  background: rgba(180, 20, 50, 0.15);
+  border: 1px solid #B91C1C;
+  color: #991B1B;
   padding: 0.6rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.85rem;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* Botón estilo píldora con relieve satinado */
+/* Botón Cápsula Pill con Relieve Satinado y Sombra Violeta (Imagen 4) */
 .desert-submit-btn {
-  background: linear-gradient(135deg, #c78996 0%, #ad6d7b 100%);
-  color: #fff4f6;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, #7A2E58 0%, #3A025B 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   padding: 0.85rem;
   font-size: 1.15rem;
-  font-weight: 600;
-  border-radius: 30px;
+  font-weight: 700;
+  border-radius: 50px;
   cursor: pointer;
   margin-top: 1rem;
-  box-shadow: 0 8px 18px rgba(90, 38, 56, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 25px rgba(58, 2, 91, 0.38), inset 0 1px 3px rgba(255, 255, 255, 0.5);
   transition: all 0.25s ease;
   font-family: inherit;
 }
 
 .desert-submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(90, 38, 56, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.5);
-  background: linear-gradient(135deg, #ce93a0 0%, #b87584 100%);
+  box-shadow: 0 14px 30px rgba(147, 3, 197, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%);
 }
 
 .desert-footer-links {
   display: flex;
   justify-content: space-between;
-  margin-top: 1.4rem;
+  margin-top: 1.5rem;
   gap: 0.8rem;
 }
 
 .desert-link {
   background: none;
   border: none;
-  color: #632a3d;
-  font-size: 0.9rem;
-  font-weight: 500;
+  color: #4A1238;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
   font-family: inherit;
   padding: 0;
 }
 
 .desert-link:hover {
-  opacity: 0.75;
+  color: #9303C5;
   text-decoration: underline;
 }
 
@@ -1219,14 +1291,14 @@ body {
     flex-direction: column;
     max-height: 90vh;
     overflow-y: auto;
+    padding: 8px;
   }
   .desert-image-panel {
     height: 180px;
     flex: none;
-    margin: 12px 12px 0 12px;
   }
   .desert-form-panel {
-    padding: 1.8rem 1.5rem;
+    padding: 1.8rem 1.4rem;
   }
 }
 
@@ -1323,59 +1395,111 @@ body {
 }
 
 /* ================================================
-   TEMA NEGRO (MODO OSCURO TIPO INSTAGRAM / PC)
+   TEMA NEGRO (MODO OSCURO - PALETA ROYAL VIOLET CON TONO BRILLANTE)
+   Basado en @rarostock (#9303C5, #520380, #3A025B, #02060E)
    ================================================ */
 .app-shell.tema-negro {
-  background: #000000 !important;
-  color: #F5F5F7 !important;
+  background: #02060E !important;
+  color: #F8F4E9 !important;
 }
 
 .app-shell.tema-negro .sidebar {
-  background: #0D0D0F !important;
-  border-right: 1px solid #242428 !important;
+  background: #0E0117 !important;
+  border-right: 1px solid rgba(147, 3, 197, 0.25) !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+.app-shell.tema-negro .sidebar-logo p {
+  color: #F8F4E9 !important;
+}
+
+.app-shell.tema-negro .sidebar-item {
+  color: #E2CCB7 !important;
+}
+
+.app-shell.tema-negro .sidebar-item.active {
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 20px rgba(147, 3, 197, 0.5) !important;
 }
 
 .app-shell.tema-negro .app-content {
-  background: #000000 !important;
+  background: #02060E !important;
 }
 
 .app-shell.tema-negro .hero {
-  background: linear-gradient(180deg, #121214 0%, #000000 100%) !important;
-  border-bottom: 1px solid #242428 !important;
+  background: radial-gradient(circle at 50% 20%, rgba(147, 3, 197, 0.3) 0%, rgba(2, 6, 14, 0.95) 75%) !important;
+  border-bottom: 1px solid rgba(147, 3, 197, 0.25) !important;
+}
+
+.app-shell.tema-negro .badge {
+  background: linear-gradient(135deg, rgba(147, 3, 197, 0.35) 0%, rgba(82, 3, 128, 0.5) 100%) !important;
+  color: #F8F4E9 !important;
+  border: 1.5px solid #9303C5 !important;
+  box-shadow: 0 0 16px rgba(147, 3, 197, 0.45) !important;
+  font-weight: 700 !important;
 }
 
 .app-shell.tema-negro .hero h1,
-.app-shell.tema-negro h2,
-.app-shell.tema-negro h3,
-.app-shell.tema-negro h4 {
+.app-shell.tema-negro .section-header h2,
+.app-shell.tema-negro .form-header h2 {
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 14px rgba(147, 3, 197, 0.4) !important;
+}
+
+.app-shell.tema-negro .hero p,
+.app-shell.tema-negro .section-header p {
+  color: #E4D5EE !important;
+}
+
+.app-shell.tema-negro .submit-btn {
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 28px rgba(147, 3, 197, 0.55) !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.app-shell.tema-negro .submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(147, 3, 197, 0.75) !important;
+}
+
+.app-shell.tema-negro .hero-actions .btn-cliente-login {
+  background: transparent !important;
+  color: #FFFFFF !important;
+  border: 2px solid #9303C5 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 18px rgba(147, 3, 197, 0.35) !important;
+}
+
+.app-shell.tema-negro .hero-actions .btn-cliente-login:hover {
+  background: #9303C5 !important;
   color: #FFFFFF !important;
 }
 
-.app-shell.tema-negro p,
-.app-shell.tema-negro span,
-.app-shell.tema-negro small {
-  color: #D1D1D6;
-}
-
 .app-shell.tema-negro .categoria-grupo {
-  background: #121215 !important;
-  border: 1px solid #27272A !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+  background: #11011C !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.35) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(147, 3, 197, 0.15) !important;
 }
 
 .app-shell.tema-negro .service-card-mini {
-  background: #18181B !important;
-  border-color: #2E2E33 !important;
+  background: #1A0129 !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.3) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
 .app-shell.tema-negro .service-card-mini:hover {
-  border-color: #FFFFFF !important;
-  background: #222226 !important;
+  border-color: #9303C5 !important;
+  box-shadow: 0 6px 25px rgba(147, 3, 197, 0.4) !important;
+  background: #220135 !important;
 }
 
 .app-shell.tema-negro .service-card-mini.selected {
-  background: #27272E !important;
-  border-color: #FFFFFF !important;
+  background: #2D0245 !important;
+  border-color: #9303C5 !important;
+  box-shadow: 0 0 25px rgba(147, 3, 197, 0.5) !important;
 }
 
 .app-shell.tema-negro .service-card-mini h4 {
@@ -1383,75 +1507,70 @@ body {
 }
 
 .app-shell.tema-negro .service-card-mini .mini-desc {
-  color: #A1A1AA !important;
+  color: #D1BEDD !important;
+}
+
+.app-shell.tema-negro .service-card-mini .mini-dur {
+  color: #F6DBC0 !important;
 }
 
 .app-shell.tema-negro .service-card-mini .mini-price {
-  color: #34D399 !important;
+  color: #D672F8 !important;
+  font-weight: 800 !important;
 }
 
 .app-shell.tema-negro .mini-select-btn {
-  border-color: #52525B !important;
-  color: #F4F4F5 !important;
+  border: 1.5px solid #9303C5 !important;
+  color: #F8F4E9 !important;
+  background: transparent !important;
 }
 
 .app-shell.tema-negro .mini-select-btn:hover,
 .app-shell.tema-negro .mini-select-btn.selected {
-  background: #FFFFFF !important;
-  color: #000000 !important;
-  border-color: #FFFFFF !important;
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%) !important;
+  color: #FFFFFF !important;
+  border-color: #9303C5 !important;
+  box-shadow: 0 4px 16px rgba(147, 3, 197, 0.5) !important;
 }
 
-.app-shell.tema-negro .info-card {
-  background: #121215 !important;
-  border: 1px solid #27272A !important;
-  color: #F5F5F7 !important;
-}
-
-.app-shell.tema-negro .form-wrapper {
-  background: #121215 !important;
-  border: 1px solid #27272A !important;
+.app-shell.tema-negro .form-wrapper,
+.app-shell.tema-negro .info-card,
+.app-shell.tema-negro .cita-clienta-card {
+  background: #11011C !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.35) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
 }
 
 .app-shell.tema-negro .booking-form input,
 .app-shell.tema-negro .booking-form select,
 .app-shell.tema-negro .booking-form textarea {
-  background: #1C1C20 !important;
-  border-color: #3F3F46 !important;
+  background: #1A0129 !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.4) !important;
   color: #FFFFFF !important;
 }
 
 .app-shell.tema-negro .combo-summary-box {
-  background: #18181B !important;
-  border-color: #3F3F46 !important;
-}
-
-.app-shell.tema-negro .cita-clienta-card {
-  background: #121215 !important;
-  border: 1px solid #27272A !important;
+  background: #1A0129 !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.4) !important;
 }
 
 .app-shell.tema-negro .footer {
-  background: #0A0A0C !important;
-  border-top: 1px solid #1E1E22 !important;
+  background: #06010B !important;
+  border-top: 1px solid rgba(147, 3, 197, 0.25) !important;
 }
 
-/* Dashboard admin en tema negro */
+/* Dashboard en Tema Negro */
 .app-shell.tema-negro .admin-dashboard {
-  background: #000000 !important;
+  background: #02060E !important;
 }
 
 .app-shell.tema-negro .dash-sidebar {
-  background: #0D0D10 !important;
-  border-right: 1px solid #242428 !important;
+  background: #0E0117 !important;
+  border-right: 1px solid rgba(147, 3, 197, 0.25) !important;
 }
 
 .app-shell.tema-negro .dash-title {
   color: #FFFFFF !important;
-}
-
-.app-shell.tema-negro .dash-subtitle {
-  color: #A1A1AA !important;
 }
 
 .app-shell.tema-negro .dash-stat-card,
@@ -1460,108 +1579,174 @@ body {
 .app-shell.tema-negro .dash-schedule-card,
 .app-shell.tema-negro .dash-table-wrap,
 .app-shell.tema-negro .dash-service-card {
-  background: #121215 !important;
-  border: 1px solid #242428 !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+  background: #11011C !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.3) !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6) !important;
 }
 
 .app-shell.tema-negro .stat-value {
   color: #FFFFFF !important;
 }
 
-.app-shell.tema-negro .stat-label {
-  color: #A1A1AA !important;
-}
-
-.app-shell.tema-negro .dash-card-header h3 {
-  color: #FFFFFF !important;
-}
-
 .app-shell.tema-negro .timeline-item {
-  background: #18181B !important;
-  border-color: #2E2E33 !important;
+  background: #1A0129 !important;
+  border-color: #520380 !important;
 }
 
-.app-shell.tema-negro .timeline-nombre {
-  color: #FFFFFF !important;
-}
-
-.app-shell.tema-negro .timeline-time {
-  color: #FFFFFF !important;
-}
-
+.app-shell.tema-negro .timeline-nombre,
 .app-shell.tema-negro .income-name {
   color: #FFFFFF !important;
 }
 
 .app-shell.tema-negro .dash-table td {
-  color: #F4F4F5 !important;
+  color: #F8F4E9 !important;
 }
 
 .app-shell.tema-negro .dash-table tbody tr:hover {
-  background: #1A1A1F !important;
-}
-
-.app-shell.tema-negro .dash-svc-name {
-  color: #FFFFFF !important;
-}
-
-.app-shell.tema-negro .dash-svc-desc {
-  color: #A1A1AA !important;
-}
-
-.app-shell.tema-negro .dash-svc-price {
-  color: #34D399 !important;
+  background: #1E0130 !important;
 }
 
 /* ================================================
-   TEMA BLANCO (MODO CLARO TIPO INSTAGRAM / PC)
+   TEMA BLANCO (MODO CLARO - CORREGIDO CON ALTO CONTRASTE Y ROYAL VIOLET)
+   Sin partes lavadas, fondo lavanda marfil (#FAF5FC) y texto nítido
    ================================================ */
 .app-shell.tema-blanco {
-  background: #F8F9FA !important;
-  color: #111827 !important;
+  background: #FAF5FC !important;
+  color: #220135 !important;
 }
 
 .app-shell.tema-blanco .sidebar {
-  background: #502D55 !important;
+  background: #1A0129 !important;
+  border-right: 1px solid rgba(147, 3, 197, 0.2) !important;
 }
 
 .app-shell.tema-blanco .app-content {
-  background: #F8F9FA !important;
+  background: #FAF5FC !important;
 }
 
 .app-shell.tema-blanco .hero {
-  background: linear-gradient(180deg, #FDF7F2 0%, #F8F9FA 100%) !important;
-  border-bottom: 1px solid #E5E7EB !important;
+  background: linear-gradient(180deg, #F8EDFB 0%, #FAF5FC 100%) !important;
+  border-bottom: 1.5px solid rgba(147, 3, 197, 0.15) !important;
 }
 
-.app-shell.tema-blanco .hero h1 {
-  color: #502D55 !important;
+/* Badge con alto contraste nítido (¡NO MÁS FONDOS BLANCOS INVISIBLES!) */
+.app-shell.tema-blanco .badge {
+  background: #3A025B !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid #9303C5 !important;
+  box-shadow: 0 4px 14px rgba(58, 2, 91, 0.25) !important;
+  font-weight: 700 !important;
 }
 
+.app-shell.tema-blanco .hero h1,
+.app-shell.tema-blanco .section-header h2,
+.app-shell.tema-blanco .form-header h2 {
+  color: #1A0129 !important;
+  font-weight: 800 !important;
+}
+
+.app-shell.tema-blanco .hero p,
+.app-shell.tema-blanco .section-header p {
+  color: #3A025B !important;
+  font-weight: 500 !important;
+}
+
+/* Botón "Ver tratamientos" */
+.app-shell.tema-blanco .submit-btn {
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(147, 3, 197, 0.45) !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.tema-blanco .submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(147, 3, 197, 0.6) !important;
+}
+
+/* Botón "Reservar cita" con contraste impecable */
+.app-shell.tema-blanco .hero-actions .btn-cliente-login {
+  background: #FFFFFF !important;
+  color: #3A025B !important;
+  border: 2.5px solid #3A025B !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 16px rgba(58, 2, 91, 0.15) !important;
+}
+
+.app-shell.tema-blanco .hero-actions .btn-cliente-login:hover {
+  background: #3A025B !important;
+  color: #FFFFFF !important;
+}
+
+/* Tarjetas y Categorías en Modo Claro */
 .app-shell.tema-blanco .categoria-grupo {
   background: #FFFFFF !important;
-  border: 1px solid #E5E7EB !important;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.05) !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.2) !important;
+  box-shadow: 0 6px 20px rgba(58, 2, 91, 0.08) !important;
 }
 
 .app-shell.tema-blanco .service-card-mini {
-  background: #FAFAFA !important;
-  border-color: #E5E7EB !important;
+  background: #FDFBFE !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.2) !important;
+  box-shadow: 0 3px 12px rgba(58, 2, 91, 0.06) !important;
 }
 
 .app-shell.tema-blanco .service-card-mini:hover {
   background: #FFFFFF !important;
-  border-color: #935073 !important;
+  border-color: #9303C5 !important;
+  box-shadow: 0 6px 22px rgba(147, 3, 197, 0.2) !important;
 }
 
 .app-shell.tema-blanco .service-card-mini.selected {
-  background: #FAF0F5 !important;
-  border-color: #502D55 !important;
+  background: #F5E8FB !important;
+  border-color: #9303C5 !important;
+  box-shadow: 0 0 20px rgba(147, 3, 197, 0.3) !important;
+}
+
+.app-shell.tema-blanco .service-card-mini h4 {
+  color: #1A0129 !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.tema-blanco .service-card-mini .mini-desc {
+  color: #520380 !important;
+}
+
+.app-shell.tema-blanco .service-card-mini .mini-dur {
+  color: #7A245C !important;
+  font-weight: 600 !important;
+}
+
+.app-shell.tema-blanco .service-card-mini .mini-price {
+  color: #9303C5 !important;
+  font-weight: 800 !important;
+}
+
+.app-shell.tema-blanco .mini-select-btn {
+  border: 2px solid #9303C5 !important;
+  color: #9303C5 !important;
+  background: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.tema-blanco .mini-select-btn:hover,
+.app-shell.tema-blanco .mini-select-btn.selected {
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%) !important;
+  color: #FFFFFF !important;
+  border-color: #9303C5 !important;
+  box-shadow: 0 4px 16px rgba(147, 3, 197, 0.35) !important;
+}
+
+.app-shell.tema-blanco .form-wrapper,
+.app-shell.tema-blanco .info-card,
+.app-shell.tema-blanco .cita-clienta-card {
+  background: #FFFFFF !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.2) !important;
+  box-shadow: 0 6px 20px rgba(58, 2, 91, 0.08) !important;
 }
 
 .app-shell.tema-blanco .admin-dashboard {
-  background: #F8F9FA !important;
+  background: #FAF5FC !important;
 }
 
 .app-shell.tema-blanco .dash-stat-card,
@@ -1571,6 +1756,30 @@ body {
 .app-shell.tema-blanco .dash-table-wrap,
 .app-shell.tema-blanco .dash-service-card {
   background: #FFFFFF !important;
-  border: 1px solid #E5E7EB !important;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05) !important;
+  border: 1.5px solid rgba(147, 3, 197, 0.18) !important;
+  box-shadow: 0 4px 16px rgba(58, 2, 91, 0.07) !important;
+}
+
+.app-shell.tema-blanco .stat-value {
+  color: #1A0129 !important;
+}
+
+.app-shell.tema-blanco .stat-label {
+  color: #520380 !important;
+}
+
+.app-shell.tema-blanco .dash-card-header h3 {
+  color: #1A0129 !important;
+}
+
+.app-shell.tema-blanco .timeline-item {
+  background: #FDFBFE !important;
+}
+
+.app-shell.tema-blanco .dash-table thead tr {
+  background: #3A025B !important;
+}
+
+.app-shell.tema-blanco .dash-table tbody tr:hover {
+  background: #F8EDFB !important;
 }

@@ -1,13 +1,13 @@
 /* ================================================
    GLAM NAILS — Admin Dashboard CSS
-   Paleta Violet Dusk: #502D55 | #935073 | #F6DBC0 | #F8F4E9
+   Paleta Royal Violet: #9303C5 | #520380 | #3A025B | #02060E
    ================================================ */
 
 /* ── Layout principal del dashboard ── */
 .admin-dashboard {
   display: flex;
   min-height: 100vh;
-  background: #F8F4E9;
+  background: #FAF5FC;
   font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
 }
 
@@ -15,7 +15,7 @@
 .dash-sidebar {
   width: 240px;
   min-width: 240px;
-  background: #502D55;
+  background: #1A0129;
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;
@@ -24,8 +24,9 @@
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  box-shadow: 4px 0 20px rgba(80,45,85,0.18);
+  box-shadow: 4px 0 20px rgba(0,0,0,0.4);
   z-index: 10;
+  border-right: 1px solid rgba(147, 3, 197, 0.25);
 }
 
 .dash-brand {
@@ -88,10 +89,10 @@
 }
 
 .dash-nav-item.active {
-  background: #935073;
-  color: #F8F4E9;
+  background: linear-gradient(135deg, #9303C5 0%, #520380 100%);
+  color: #FFFFFF;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(147,80,115,0.4);
+  box-shadow: 0 4px 18px rgba(147, 3, 197, 0.5);
 }
 
 .dash-nav-icon {
