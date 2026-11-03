@@ -924,11 +924,11 @@ function App() {
             ) : (() => {
               // 5 Imágenes maestras por categoría (Opción 1)
               const IMAGENES_CATEGORIA = {
-                '💅 Manicura': '/manicure-gel.png',
-                '🦶 Pedicure': '/pedicure-tradicional.png',
-                '🔄 Retoques': '/unas-acrilicas.png',
-                '🧔 Caballero': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80',
-                '✨ Servicios Adicionales': 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80',
+                '💅 Manicura': '/cat-manicura.jpg',
+                '🦶 Pedicure': '/cat-pedicure.jpg',
+                '🔄 Retoques': '/cat-retoques.jpg',
+                '🧔 Caballero': '/cat-caballero.jpg',
+                '✨ Servicios Adicionales': '/cat-adicionales.jpg',
                 '🌸 Otros': '/manicure-tradicional.png'
               };
 
