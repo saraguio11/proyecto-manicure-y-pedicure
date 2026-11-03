@@ -15,9 +15,10 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-// Pool de conexión a MySQL
+// Pool de conexión a MySQL (incluye DB_PORT para Railway)
 export const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'manicure_pedicure',
@@ -41,6 +42,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend de Manicure & Pedicure corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend de Manicure & Pedicure corriendo en el puerto ${PORT}`);
 });
