@@ -6,6 +6,7 @@ import mysql from 'mysql2/promise';
 import authRoutes from './routes/auth.routes.js';
 import serviciosRoutes from './routes/servicios.routes.js';
 import citasRoutes from './routes/citas.routes.js';
+import { verificarToken, soloAdmin } from './middlewares/auth.middleware.js';
 
 dotenv.config();
 
@@ -31,6 +32,83 @@ export const pool = mysql.createPool({
 app.use('/api/auth', authRoutes);
 app.use('/api/servicios', serviciosRoutes);
 app.use('/api/citas', citasRoutes);
+
+// =============================================
+// ENDPOINT: Estadísticas para el dashboard admin
+// =============================================
+app.get('/api/admin/stats', verificarToken, soloAdmin, async (req, res) => {
+  try {
+    // Total de citas por estado
+    const [porEstado] = await pool.query(`
+      SELECT ec.id, ec.nombre, COUNT(c.id) AS total
+      FROM estados_cita ec
+      LEFT JOIN citas c ON c.estado_id = ec.id
+      GROUP BY ec.id, ec.nombre
+      ORDER BY ec.id
+    `);
+
+    // Ingresos del mes actual (citas pagadas o atendidas)
+    const [ingresosMes] = await pool.query(`
+      SELECT COALESCE(SUM(c.precio), 0) AS ingresos_mes
+      FROM citas c
+      WHERE MONTH(c.fecha) = MONTH(CURRENT_DATE())
+        AND YEAR(c.fecha) = YEAR(CURRENT_DATE())
+        AND c.estado_id IN (2, 4)
+    `);
+
+    // Ingresos totales (citas confirmadas + atendidas)
+    const [ingresosTotal] = await pool.query(`
+      SELECT COALESCE(SUM(c.precio), 0) AS ingresos_total
+      FROM citas c
+      WHERE c.estado_id IN (2, 4)
+    `);
+
+    // Citas de hoy
+    const [citasHoy] = await pool.query(`
+      SELECT c.id, c.hora_inicio, c.hora_fin, c.precio, c.estado_id, c.estado_pago,
+             u.nombre_completo AS cliente_nombre,
+             s.nombre AS servicio_nombre,
+             ec.nombre AS estado_nombre,
+             s.duracion_min
+      FROM citas c
+      JOIN usuarios u ON u.id = c.usuario_id
+      JOIN servicios s ON s.id = c.servicio_id
+      JOIN estados_cita ec ON ec.id = c.estado_id
+      WHERE c.fecha = CURRENT_DATE()
+        AND c.estado_id != 3
+      ORDER BY c.hora_inicio
+    `);
+
+    // Top 5 citas recientes (para lista de ingresos)
+    const [citasRecientes] = await pool.query(`
+      SELECT c.id, c.fecha, c.precio, c.estado_pago, c.estado_id,
+             u.nombre_completo AS cliente_nombre,
+             s.nombre AS servicio_nombre
+      FROM citas c
+      JOIN usuarios u ON u.id = c.usuario_id
+      JOIN servicios s ON s.id = c.servicio_id
+      WHERE c.estado_id IN (2, 4)
+      ORDER BY c.creado_en DESC
+      LIMIT 5
+    `);
+
+    // Total clientas registradas
+    const [totalClientas] = await pool.query(`
+      SELECT COUNT(*) AS total FROM usuarios WHERE rol_id = 1
+    `);
+
+    res.json({
+      estadosCita: porEstado,
+      ingresosMes: Number(ingresosMes[0].ingresos_mes),
+      ingresosTotal: Number(ingresosTotal[0].ingresos_total),
+      citasHoy,
+      citasRecientes,
+      totalClientas: Number(totalClientas[0].total)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Healthcheck
 app.get('/api/health', async (req, res) => {
