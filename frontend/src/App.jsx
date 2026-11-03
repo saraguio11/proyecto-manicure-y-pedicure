@@ -922,32 +922,47 @@ function App() {
             {cargandoServicios ? (
               <p className="loading">Cargando catálogo...</p>
             ) : (() => {
+              // 5 Imágenes maestras por categoría (Opción 1)
+              const IMAGENES_CATEGORIA = {
+                '💅 Manicura': '/manicure-gel.png',
+                '🦶 Pedicure': '/pedicure-tradicional.png',
+                '🔄 Retoques': '/unas-acrilicas.png',
+                '🧔 Caballero': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80',
+                '✨ Servicios Adicionales': 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80',
+                '🌸 Otros': '/manicure-tradicional.png'
+              };
+
               // Agrupar servicios por categoría
               const categorias = [
                 {
                   nombre: '💅 Manicura',
                   keywords: ['Manicure', 'Semipermanente', 'Dipping', 'Nivelación', 'Forrado', 'Press On', 'Polygel con', 'Acrílicas con'],
-                  color: 'cat-manicure'
+                  color: 'cat-manicure',
+                  imagen: IMAGENES_CATEGORIA['💅 Manicura']
                 },
                 {
                   nombre: '🦶 Pedicure',
                   keywords: ['Pedicure'],
-                  color: 'cat-pedicure'
+                  color: 'cat-pedicure',
+                  imagen: IMAGENES_CATEGORIA['🦶 Pedicure']
                 },
                 {
                   nombre: '🔄 Retoques',
                   keywords: ['Retoque'],
-                  color: 'cat-retoques'
+                  color: 'cat-retoques',
+                  imagen: IMAGENES_CATEGORIA['🔄 Retoques']
                 },
                 {
                   nombre: '🧔 Caballero',
                   keywords: ['Caballero'],
-                  color: 'cat-caballero'
+                  color: 'cat-caballero',
+                  imagen: IMAGENES_CATEGORIA['🧔 Caballero']
                 },
                 {
                   nombre: '✨ Servicios Adicionales',
                   keywords: ['Retiro', 'Decoración', 'Reparación'],
-                  color: 'cat-adicional'
+                  color: 'cat-adicional',
+                  imagen: IMAGENES_CATEGORIA['✨ Servicios Adicionales']
                 },
               ];
 
@@ -963,27 +978,42 @@ function App() {
 
               const sinCategorizar = servicios.filter(s => !asignados.has(s.id));
               if (sinCategorizar.length > 0) {
-                grupos.push({ nombre: '🌸 Otros', keywords: [], color: 'cat-otros', items: sinCategorizar });
+                grupos.push({
+                  nombre: '🌸 Otros',
+                  keywords: [],
+                  color: 'cat-otros',
+                  imagen: IMAGENES_CATEGORIA['🌸 Otros'],
+                  items: sinCategorizar
+                });
               }
 
               return (
                 <div className="catalogo-categorias">
                   {grupos.filter(g => g.items.length > 0).map(grupo => (
                     <div key={grupo.nombre} className={`categoria-grupo ${grupo.color}`}>
-                      <h3 className="categoria-titulo">{grupo.nombre}</h3>
+                      <div className="categoria-banner">
+                        <div className="categoria-banner-img-wrap">
+                          <img src={grupo.imagen} alt={grupo.nombre} className="categoria-banner-img" />
+                          <div className="categoria-banner-overlay" />
+                        </div>
+                        <div className="categoria-banner-text">
+                          <h3 className="categoria-titulo">{grupo.nombre}</h3>
+                          <span className="categoria-badge">{grupo.items.length} servicios disponibles</span>
+                        </div>
+                      </div>
+
                       <div className="categoria-cards">
                         {grupo.items.map(s => {
                           const sel = serviciosSeleccionados.some(item => item.id === s.id);
-                          const img = s.imagen_url || IMAGENES_SERVICIOS[s.id] || '/manicure-tradicional.png';
                           return (
                             <div
                               key={s.id}
                               className={`service-card-mini ${sel ? 'selected' : ''}`}
                               onClick={() => toggleServicio(s)}
                             >
-                              <div className="mini-img-wrap">
-                                <img src={img} alt={s.nombre} onError={e => { e.target.src = '/manicure-tradicional.png'; }} />
-                                {sel && <div className="mini-checkmark">✓</div>}
+                              <div className="mini-header-indicator">
+                                <span className="mini-chip-cat">{grupo.nombre.split(' ')[0]}</span>
+                                {sel && <span className="mini-checkmark-chip">✓ Elegido</span>}
                               </div>
                               <div className="mini-body">
                                 <h4>{s.nombre}</h4>
@@ -993,7 +1023,7 @@ function App() {
                                   <span className="mini-price">${Number(s.precio).toLocaleString()}</span>
                                 </div>
                                 <button className={`mini-select-btn ${sel ? 'selected' : ''}`}>
-                                  {sel ? '✓ Seleccionado' : '+ Agregar'}
+                                  {sel ? '✓ En tu paquete' : '+ Agregar'}
                                 </button>
                               </div>
                             </div>

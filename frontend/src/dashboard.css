@@ -766,7 +766,7 @@
 }
 
 /* ================================================
-   CATÁLOGO POR CATEGORÍAS (página Tratamientos)
+   CATÁLOGO POR CATEGORÍAS (Opción 1: Banner Maestro)
    ================================================ */
 .catalogo-categorias {
   display: flex;
@@ -776,105 +776,151 @@
 
 .categoria-grupo {
   background: white;
-  border-radius: 20px;
+  border-radius: 24px;
   padding: 1.5rem;
-  box-shadow: 0 2px 16px rgba(80,45,85,0.08);
-  border-top: 4px solid #935073;
+  box-shadow: 0 4px 20px rgba(80,45,85,0.07);
+  border: 1px solid rgba(147,80,115,0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.cat-manicure   { border-top-color: #935073; }
-.cat-pedicure   { border-top-color: #6366F1; }
-.cat-retoques   { border-top-color: #F59E0B; }
-.cat-caballero  { border-top-color: #10B981; }
-.cat-adicional  { border-top-color: #EC4899; }
-.cat-otros      { border-top-color: #94A3B8; }
+/* ── Banner de Cabecera con la Imagen Maestra ── */
+.categoria-banner {
+  position: relative;
+  height: 140px;
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 1.5rem;
+  box-shadow: 0 4px 14px rgba(80,45,85,0.15);
+}
+
+.categoria-banner-img-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.categoria-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85);
+  transition: transform 0.4s ease;
+}
+
+.categoria-grupo:hover .categoria-banner-img {
+  transform: scale(1.03);
+}
+
+.categoria-banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(80,45,85,0.2) 0%, rgba(80,45,85,0.85) 100%);
+  z-index: 2;
+}
+
+.categoria-banner-text {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+}
 
 .categoria-titulo {
   font-family: 'Playfair Display', serif;
-  font-size: 1.25rem;
-  color: #502D55;
-  margin: 0 0 1.25rem;
+  font-size: 1.6rem;
+  color: #F8F4E9;
+  margin: 0;
   font-weight: 700;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f3e8ee;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
+.categoria-badge {
+  background: rgba(246,219,192,0.9);
+  color: #502D55;
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Grilla de Tarjetas ── */
 .categoria-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1.1rem;
 }
 
 /* ── Tarjetas mini de servicio ── */
 .service-card-mini {
   border-radius: 16px;
-  background: #fdf8ff;
-  border: 2px solid #f0e4f0;
+  background: #fdfaf7;
+  border: 1.5px solid #ebdcd5;
   cursor: pointer;
-  transition: all 0.22s;
-  overflow: hidden;
+  transition: all 0.22s ease;
   display: flex;
   flex-direction: column;
+  padding: 1.1rem;
   position: relative;
+  justify-content: space-between;
 }
 
 .service-card-mini:hover {
   border-color: #935073;
-  box-shadow: 0 4px 18px rgba(147,80,115,0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(147,80,115,0.12);
+  transform: translateY(-3px);
+  background: #ffffff;
 }
 
 .service-card-mini.selected {
   border-color: #502D55;
-  background: #f5eaf7;
-  box-shadow: 0 4px 20px rgba(80,45,85,0.22);
+  background: #f7eef7;
+  box-shadow: 0 6px 20px rgba(80,45,85,0.18);
+  border-width: 2px;
 }
 
-.mini-img-wrap {
-  position: relative;
-  height: 120px;
-  overflow: hidden;
-  background: #F6DBC0;
-}
-
-.mini-img-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.service-card-mini:hover .mini-img-wrap img {
-  transform: scale(1.05);
-}
-
-.mini-checkmark {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 26px;
-  height: 26px;
-  background: #502D55;
-  color: #F6DBC0;
-  border-radius: 50%;
+.mini-header-indicator {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+
+.mini-chip-cat {
+  font-size: 1.1rem;
+}
+
+.mini-checkmark-chip {
+  background: #10B981;
+  color: white;
+  border-radius: 20px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(80,45,85,0.35);
+  animation: fadeIn 0.2s ease;
 }
 
 .mini-body {
-  padding: 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.4rem;
   flex: 1;
 }
 
 .mini-body h4 {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #502D55;
   margin: 0;
@@ -882,8 +928,8 @@
 }
 
 .mini-desc {
-  font-size: 0.72rem;
-  color: #935073;
+  font-size: 0.76rem;
+  color: #7a4e66;
   margin: 0;
   line-height: 1.4;
   display: -webkit-box;
@@ -896,35 +942,42 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.25rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(147,80,115,0.2);
 }
 
 .mini-dur {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: #935073;
+  font-weight: 600;
 }
 
 .mini-price {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #502D55;
 }
 
 .mini-select-btn {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   width: 100%;
-  padding: 0.45rem;
-  border-radius: 8px;
-  border: 2px solid #935073;
+  padding: 0.55rem;
+  border-radius: 10px;
+  border: 1.5px solid #935073;
   background: transparent;
   color: #935073;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.mini-select-btn:hover,
+.mini-select-btn:hover {
+  background: #935073;
+  color: #F8F4E9;
+}
+
 .mini-select-btn.selected {
   background: #502D55;
   border-color: #502D55;
