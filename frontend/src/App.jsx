@@ -36,12 +36,17 @@ function App() {
   const [pagina, setPagina] = useState('inicio');
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [verPassword, setVerPassword] = useState(false);
-  const [modoBN, setModoBN] = useState(() => localStorage.getItem('modo_bn') === 'true');
+  
+  // Tema Blanco / Negro (Modo Claro vs Modo Oscuro tipo Instagram / Windows)
+  const [temaOscuro, setTemaOscuro] = useState(() => {
+    const guardado = localStorage.getItem('tema_oscuro');
+    return guardado === 'true';
+  });
 
-  const toggleModoBN = () => {
-    setModoBN(prev => {
+  const toggleTema = () => {
+    setTemaOscuro(prev => {
       const nuevo = !prev;
-      localStorage.setItem('modo_bn', String(nuevo));
+      localStorage.setItem('tema_oscuro', String(nuevo));
       return nuevo;
     });
   };
@@ -412,7 +417,7 @@ function App() {
       ];
 
   return (
-    <div className={`app-shell ${modoBN ? 'modo-blanco-negro' : ''}`}>
+    <div className={`app-shell ${temaOscuro ? 'tema-negro' : 'tema-blanco'}`}>
       {alerta && (
         <div className={`toast-notification toast-${alerta.tipo}`}>
           <span>{alerta.tipo === 'success' ? '✓' : alerta.tipo === 'warning' ? '⚠️' : '✕'}</span>
@@ -454,11 +459,12 @@ function App() {
         <div className="sidebar-foot">
           <button
             type="button"
-            className="btn-toggle-bn"
-            onClick={toggleModoBN}
-            title="Alternar modo blanco y negro"
+            className="btn-theme-switch"
+            onClick={toggleTema}
+            title={temaOscuro ? "Cambiar a modo Blanco (Claro)" : "Cambiar a modo Negro (Oscuro)"}
           >
-            {modoBN ? '🌈 Color original' : '🌓 Blanco y negro'}
+            <span className="theme-switch-icon">{temaOscuro ? '☀️' : '🌙'}</span>
+            <span>{temaOscuro ? 'Modo Blanco' : 'Modo Negro'}</span>
           </button>
           {usuario ? (
             <>
@@ -516,12 +522,13 @@ function App() {
             <div className="dash-sidebar-foot">
               <button
                 type="button"
-                className="btn-toggle-bn"
-                onClick={toggleModoBN}
-                style={{ width: '100%', marginBottom: '0.5rem' }}
-                title="Alternar modo blanco y negro"
+                className="btn-theme-switch"
+                onClick={toggleTema}
+                style={{ width: '100%', marginBottom: '0.65rem' }}
+                title={temaOscuro ? "Cambiar a modo Blanco (Claro)" : "Cambiar a modo Negro (Oscuro)"}
               >
-                {modoBN ? '🌈 Color original' : '🌓 Blanco y negro'}
+                <span className="theme-switch-icon">{temaOscuro ? '☀️' : '🌙'}</span>
+                <span>{temaOscuro ? 'Modo Blanco' : 'Modo Negro'}</span>
               </button>
               <div className="dash-user-info">
                 <div className="dash-user-avatar">

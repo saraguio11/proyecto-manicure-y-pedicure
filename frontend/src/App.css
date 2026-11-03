@@ -1291,39 +1291,286 @@ body {
 }
 
 /* ================================================
-   MODO BLANCO Y NEGRO (ESCALA DE GRISES Y ALTO CONTRASTE)
+   SWITCH MODO BLANCO / MODO NEGRO (Estilo Instagram / Windows)
    ================================================ */
-.btn-toggle-bn {
+.btn-theme-switch {
   background: rgba(246, 219, 192, 0.15);
   border: 1px solid rgba(246, 219, 192, 0.35);
   color: #F6DBC0;
-  border-radius: 20px;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.78rem;
+  border-radius: 24px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  transition: all 0.2s ease;
+  gap: 0.5rem;
+  transition: all 0.25s ease;
   width: 100%;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 
-.btn-toggle-bn:hover {
+.btn-theme-switch:hover {
   background: rgba(246, 219, 192, 0.28);
   border-color: #F6DBC0;
   transform: translateY(-1px);
 }
 
-/* Estilo aplicado cuando el modo Blanco y Negro está activado */
-.modo-blanco-negro {
-  filter: grayscale(100%) contrast(108%);
-  transition: filter 0.35s ease;
+.theme-switch-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
-.modo-blanco-negro .service-card-mini.selected,
-.modo-blanco-negro .service-card.selected {
-  outline: 3px solid #000000;
+/* ================================================
+   TEMA NEGRO (MODO OSCURO TIPO INSTAGRAM / PC)
+   ================================================ */
+.app-shell.tema-negro {
+  background: #000000 !important;
+  color: #F5F5F7 !important;
+}
+
+.app-shell.tema-negro .sidebar {
+  background: #0D0D0F !important;
+  border-right: 1px solid #242428 !important;
+}
+
+.app-shell.tema-negro .app-content {
+  background: #000000 !important;
+}
+
+.app-shell.tema-negro .hero {
+  background: linear-gradient(180deg, #121214 0%, #000000 100%) !important;
+  border-bottom: 1px solid #242428 !important;
+}
+
+.app-shell.tema-negro .hero h1,
+.app-shell.tema-negro h2,
+.app-shell.tema-negro h3,
+.app-shell.tema-negro h4 {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro p,
+.app-shell.tema-negro span,
+.app-shell.tema-negro small {
+  color: #D1D1D6;
+}
+
+.app-shell.tema-negro .categoria-grupo {
+  background: #121215 !important;
+  border: 1px solid #27272A !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+}
+
+.app-shell.tema-negro .service-card-mini {
+  background: #18181B !important;
+  border-color: #2E2E33 !important;
+}
+
+.app-shell.tema-negro .service-card-mini:hover {
+  border-color: #FFFFFF !important;
+  background: #222226 !important;
+}
+
+.app-shell.tema-negro .service-card-mini.selected {
+  background: #27272E !important;
+  border-color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .service-card-mini h4 {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .service-card-mini .mini-desc {
+  color: #A1A1AA !important;
+}
+
+.app-shell.tema-negro .service-card-mini .mini-price {
+  color: #34D399 !important;
+}
+
+.app-shell.tema-negro .mini-select-btn {
+  border-color: #52525B !important;
+  color: #F4F4F5 !important;
+}
+
+.app-shell.tema-negro .mini-select-btn:hover,
+.app-shell.tema-negro .mini-select-btn.selected {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  border-color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .info-card {
+  background: #121215 !important;
+  border: 1px solid #27272A !important;
+  color: #F5F5F7 !important;
+}
+
+.app-shell.tema-negro .form-wrapper {
+  background: #121215 !important;
+  border: 1px solid #27272A !important;
+}
+
+.app-shell.tema-negro .booking-form input,
+.app-shell.tema-negro .booking-form select,
+.app-shell.tema-negro .booking-form textarea {
+  background: #1C1C20 !important;
+  border-color: #3F3F46 !important;
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .combo-summary-box {
+  background: #18181B !important;
+  border-color: #3F3F46 !important;
+}
+
+.app-shell.tema-negro .cita-clienta-card {
+  background: #121215 !important;
+  border: 1px solid #27272A !important;
+}
+
+.app-shell.tema-negro .footer {
+  background: #0A0A0C !important;
+  border-top: 1px solid #1E1E22 !important;
+}
+
+/* Dashboard admin en tema negro */
+.app-shell.tema-negro .admin-dashboard {
+  background: #000000 !important;
+}
+
+.app-shell.tema-negro .dash-sidebar {
+  background: #0D0D10 !important;
+  border-right: 1px solid #242428 !important;
+}
+
+.app-shell.tema-negro .dash-title {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .dash-subtitle {
+  color: #A1A1AA !important;
+}
+
+.app-shell.tema-negro .dash-stat-card,
+.app-shell.tema-negro .dash-donut-card,
+.app-shell.tema-negro .dash-income-card,
+.app-shell.tema-negro .dash-schedule-card,
+.app-shell.tema-negro .dash-table-wrap,
+.app-shell.tema-negro .dash-service-card {
+  background: #121215 !important;
+  border: 1px solid #242428 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+}
+
+.app-shell.tema-negro .stat-value {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .stat-label {
+  color: #A1A1AA !important;
+}
+
+.app-shell.tema-negro .dash-card-header h3 {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .timeline-item {
+  background: #18181B !important;
+  border-color: #2E2E33 !important;
+}
+
+.app-shell.tema-negro .timeline-nombre {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .timeline-time {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .income-name {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .dash-table td {
+  color: #F4F4F5 !important;
+}
+
+.app-shell.tema-negro .dash-table tbody tr:hover {
+  background: #1A1A1F !important;
+}
+
+.app-shell.tema-negro .dash-svc-name {
+  color: #FFFFFF !important;
+}
+
+.app-shell.tema-negro .dash-svc-desc {
+  color: #A1A1AA !important;
+}
+
+.app-shell.tema-negro .dash-svc-price {
+  color: #34D399 !important;
+}
+
+/* ================================================
+   TEMA BLANCO (MODO CLARO TIPO INSTAGRAM / PC)
+   ================================================ */
+.app-shell.tema-blanco {
+  background: #F8F9FA !important;
+  color: #111827 !important;
+}
+
+.app-shell.tema-blanco .sidebar {
+  background: #502D55 !important;
+}
+
+.app-shell.tema-blanco .app-content {
+  background: #F8F9FA !important;
+}
+
+.app-shell.tema-blanco .hero {
+  background: linear-gradient(180deg, #FDF7F2 0%, #F8F9FA 100%) !important;
+  border-bottom: 1px solid #E5E7EB !important;
+}
+
+.app-shell.tema-blanco .hero h1 {
+  color: #502D55 !important;
+}
+
+.app-shell.tema-blanco .categoria-grupo {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.05) !important;
+}
+
+.app-shell.tema-blanco .service-card-mini {
+  background: #FAFAFA !important;
+  border-color: #E5E7EB !important;
+}
+
+.app-shell.tema-blanco .service-card-mini:hover {
+  background: #FFFFFF !important;
+  border-color: #935073 !important;
+}
+
+.app-shell.tema-blanco .service-card-mini.selected {
+  background: #FAF0F5 !important;
+  border-color: #502D55 !important;
+}
+
+.app-shell.tema-blanco .admin-dashboard {
+  background: #F8F9FA !important;
+}
+
+.app-shell.tema-blanco .dash-stat-card,
+.app-shell.tema-blanco .dash-donut-card,
+.app-shell.tema-blanco .dash-income-card,
+.app-shell.tema-blanco .dash-schedule-card,
+.app-shell.tema-blanco .dash-table-wrap,
+.app-shell.tema-blanco .dash-service-card {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05) !important;
 }
