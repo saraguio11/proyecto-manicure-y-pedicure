@@ -461,10 +461,10 @@ function App() {
             type="button"
             className="btn-theme-switch"
             onClick={toggleTema}
-            title={temaOscuro ? "Cambiar a modo Blanco (Claro)" : "Cambiar a modo Negro (Oscuro)"}
+            title={temaOscuro ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
           >
             <span className="theme-switch-icon">{temaOscuro ? '☀️' : '🌙'}</span>
-            <span>{temaOscuro ? 'Modo Blanco' : 'Modo Negro'}</span>
+            <span>{temaOscuro ? 'Modo Claro' : 'Modo Oscuro'}</span>
           </button>
           {usuario ? (
             <>
@@ -525,10 +525,10 @@ function App() {
                 className="btn-theme-switch"
                 onClick={toggleTema}
                 style={{ width: '100%', marginBottom: '0.65rem' }}
-                title={temaOscuro ? "Cambiar a modo Blanco (Claro)" : "Cambiar a modo Negro (Oscuro)"}
+                title={temaOscuro ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
               >
                 <span className="theme-switch-icon">{temaOscuro ? '☀️' : '🌙'}</span>
-                <span>{temaOscuro ? 'Modo Blanco' : 'Modo Negro'}</span>
+                <span>{temaOscuro ? 'Modo Claro' : 'Modo Oscuro'}</span>
               </button>
               <div className="dash-user-info">
                 <div className="dash-user-avatar">
