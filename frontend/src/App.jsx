@@ -35,6 +35,17 @@ function App() {
   const [alerta, setAlerta] = useState(null);
   const [pagina, setPagina] = useState('inicio');
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [verPassword, setVerPassword] = useState(false);
+  const [modoBN, setModoBN] = useState(() => localStorage.getItem('modo_bn') === 'true');
+
+  const toggleModoBN = () => {
+    setModoBN(prev => {
+      const nuevo = !prev;
+      localStorage.setItem('modo_bn', String(nuevo));
+      return nuevo;
+    });
+  };
+
   const mostrarAlerta = (texto, tipo = 'success') => {
     setAlerta({ texto, tipo });
     setTimeout(() => setAlerta(null), 4500);
@@ -401,7 +412,7 @@ function App() {
       ];
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${modoBN ? 'modo-blanco-negro' : ''}`}>
       {alerta && (
         <div className={`toast-notification toast-${alerta.tipo}`}>
           <span>{alerta.tipo === 'success' ? '✓' : alerta.tipo === 'warning' ? '⚠️' : '✕'}</span>
@@ -441,6 +452,14 @@ function App() {
         </nav>
 
         <div className="sidebar-foot">
+          <button
+            type="button"
+            className="btn-toggle-bn"
+            onClick={toggleModoBN}
+            title="Alternar modo blanco y negro"
+          >
+            {modoBN ? '🌈 Color original' : '🌓 Blanco y negro'}
+          </button>
           {usuario ? (
             <>
               <p className="sidebar-user">
@@ -495,6 +514,15 @@ function App() {
             </nav>
 
             <div className="dash-sidebar-foot">
+              <button
+                type="button"
+                className="btn-toggle-bn"
+                onClick={toggleModoBN}
+                style={{ width: '100%', marginBottom: '0.5rem' }}
+                title="Alternar modo blanco y negro"
+              >
+                {modoBN ? '🌈 Color original' : '🌓 Blanco y negro'}
+              </button>
               <div className="dash-user-info">
                 <div className="dash-user-avatar">
                   {(usuario?.nombre_completo || usuario?.nombre || 'A').charAt(0).toUpperCase()}
@@ -1244,12 +1272,19 @@ function App() {
                       <label>Password</label>
                       <div className="desert-input-wrap">
                         <input
-                          type="password"
+                          type={verPassword ? 'text' : 'password'}
                           required
                           value={authForm.password}
                           onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
                         />
-                        <span className="input-icon">🔒</span>
+                        <button
+                          type="button"
+                          className="eye-toggle-btn"
+                          onClick={() => setVerPassword(!verPassword)}
+                          title={verPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {verPassword ? '👁️' : '🔒'}
+                        </button>
                       </div>
                     </div>
 
@@ -1284,12 +1319,19 @@ function App() {
                       <label>Password</label>
                       <div className="desert-input-wrap">
                         <input
-                          type="password"
+                          type={verPassword ? 'text' : 'password'}
                           required
                           value={authForm.password}
                           onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
                         />
-                        <span className="input-icon">🔒</span>
+                        <button
+                          type="button"
+                          className="eye-toggle-btn"
+                          onClick={() => setVerPassword(!verPassword)}
+                          title={verPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {verPassword ? '👁️' : '🔒'}
+                        </button>
                       </div>
                     </div>
 
@@ -1380,13 +1422,20 @@ function App() {
                       <label>Password</label>
                       <div className="desert-input-wrap">
                         <input
-                          type="password"
+                          type={verPassword ? 'text' : 'password'}
                           required
                           placeholder="Mínimo 6 caracteres"
                           value={authForm.password}
                           onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
                         />
-                        <span className="input-icon">🔒</span>
+                        <button
+                          type="button"
+                          className="eye-toggle-btn"
+                          onClick={() => setVerPassword(!verPassword)}
+                          title={verPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                        >
+                          {verPassword ? '👁️' : '🔒'}
+                        </button>
                       </div>
                     </div>
 
