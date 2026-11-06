@@ -6,6 +6,7 @@ import mysql from 'mysql2/promise';
 import authRoutes from './routes/auth.routes.js';
 import serviciosRoutes from './routes/servicios.routes.js';
 import citasRoutes from './routes/citas.routes.js';
+import manicuristasRoutes from './routes/manicuristas.routes.js';
 import { verificarToken, soloAdmin } from './middlewares/auth.middleware.js';
 
 dotenv.config();
@@ -32,6 +33,7 @@ export const pool = mysql.createPool({
 app.use('/api/auth', authRoutes);
 app.use('/api/servicios', serviciosRoutes);
 app.use('/api/citas', citasRoutes);
+app.use('/api/manicuristas', manicuristasRoutes);
 
 // =============================================
 // ENDPOINT: Estadísticas para el dashboard admin

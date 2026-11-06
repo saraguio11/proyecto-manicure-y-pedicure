@@ -149,7 +149,26 @@ function App() {
 
   // Dashboard stats
   const [dashStats, setDashStats] = useState(null);
-  const [dashSeccion, setDashSeccion] = useState('dashboard'); // dashboard | citas | servicios | clientas
+  const [dashSeccion, setDashSeccion] = useState('dashboard'); // dashboard | citas | servicios | manicuristas | clientas
+
+  // ── CRUD Servicios (admin) ──
+  const [modalServicio, setModalServicio] = useState(null); // null | 'nuevo' | objeto_servicio
+  const [formServicio, setFormServicio] = useState({ nombre: '', descripcion: '', duracion_min: 60, precio: '', imagen_url: '', categoria: '' });
+  const [guardandoServicio, setGuardandoServicio] = useState(false);
+  const CATEGORIAS_SERVICIO = ['💅 Manicura', '🦶 Pedicure', '🔄 Retoques', '🧔 Caballero', '✨ Adicionales'];
+
+  // ── CRUD Manicuristas (admin) ──
+  const [manicuristas, setManicuristas] = useState([]);
+  const [cargandoManicuristas, setCargandoManicuristas] = useState(false);
+  const [modalManicurista, setModalManicurista] = useState(null); // null | 'nuevo' | objeto
+  const [formManicurista, setFormManicurista] = useState({ nombre: '', especialidad: '', foto_url: '' });
+  const [guardandoManicurista, setGuardandoManicurista] = useState(false);
+
+  // ── Calendario de reservas (vista cliente) ──
+  const hoy = new Date();
+  const [calMes, setCalMes] = useState(hoy.getMonth());
+  const [calAnio, setCalAnio] = useState(hoy.getFullYear());
+  const [calDiaSeleccionado, setCalDiaSeleccionado] = useState(null);
 
   useEffect(() => {
     if (!formReserva.fecha) {
@@ -210,6 +229,109 @@ function App() {
       .catch(err => console.error('Stats error:', err));
   };
 
+  // ── Cargar manicuristas (admin) ──
+  const cargarManicuristas = () => {
+    if (!token) return;
+    setCargandoManicuristas(true);
+    fetch(`${API_BASE}/manicuristas/admin/all`, { headers: authHeaders() })
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setManicuristas(data); })
+      .catch(err => console.error(err))
+      .finally(() => setCargandoManicuristas(false));
+  };
+
+  // ── CRUD Servicios ──
+  const abrirFormServicio = (servicio = null) => {
+    if (servicio) {
+      setFormServicio({ nombre: servicio.nombre, descripcion: servicio.descripcion || '', duracion_min: servicio.duracion_min, precio: servicio.precio, imagen_url: servicio.imagen_url || '', categoria: servicio.categoria || '' });
+      setModalServicio(servicio);
+    } else {
+      setFormServicio({ nombre: '', descripcion: '', duracion_min: 60, precio: '', imagen_url: '', categoria: '' });
+      setModalServicio('nuevo');
+    }
+  };
+  const cerrarFormServicio = () => setModalServicio(null);
+
+  const guardarServicio = async (e) => {
+    e.preventDefault();
+    if (!formServicio.nombre.trim() || !formServicio.precio || !formServicio.duracion_min) {
+      return mostrarAlerta('Nombre, precio y duración son obligatorios', 'error');
+    }
+    setGuardandoServicio(true);
+    try {
+      const esEdicion = modalServicio && modalServicio !== 'nuevo';
+      const url = esEdicion ? `${API_BASE}/servicios/${modalServicio.id}` : `${API_BASE}/servicios`;
+      const method = esEdicion ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify({ ...formServicio, duracion_min: Number(formServicio.duracion_min), precio: Number(formServicio.precio) }) });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta(data.mensaje, 'success');
+        cerrarFormServicio();
+        cargarServicios();
+      } else {
+        mostrarAlerta(data.error || 'Error al guardar', 'error');
+      }
+    } catch (err) { mostrarAlerta('Error: ' + err.message, 'error'); }
+    finally { setGuardandoServicio(false); }
+  };
+
+  const desactivarServicio = async (id) => {
+    if (!window.confirm('¿Desactivar este servicio? No se podrá reservar hasta que lo reactives.')) return;
+    try {
+      const res = await fetch(`${API_BASE}/servicios/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok) { mostrarAlerta(data.mensaje, 'success'); cargarServicios(); }
+      else mostrarAlerta(data.error, 'error');
+    } catch (err) { mostrarAlerta('Error: ' + err.message, 'error'); }
+  };
+
+  const reactivarServicio = async (s) => {
+    try {
+      const res = await fetch(`${API_BASE}/servicios/${s.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ ...s, activo: true }) });
+      const data = await res.json();
+      if (res.ok) { mostrarAlerta('Servicio reactivado ✓', 'success'); cargarServicios(); }
+      else mostrarAlerta(data.error, 'error');
+    } catch (err) { mostrarAlerta('Error: ' + err.message, 'error'); }
+  };
+
+  // ── CRUD Manicuristas ──
+  const abrirFormManicurista = (m = null) => {
+    if (m) {
+      setFormManicurista({ nombre: m.nombre, especialidad: m.especialidad || '', foto_url: m.foto_url || '' });
+      setModalManicurista(m);
+    } else {
+      setFormManicurista({ nombre: '', especialidad: '', foto_url: '' });
+      setModalManicurista('nuevo');
+    }
+  };
+  const cerrarFormManicurista = () => setModalManicurista(null);
+
+  const guardarManicurista = async (e) => {
+    e.preventDefault();
+    if (!formManicurista.nombre.trim()) return mostrarAlerta('El nombre es obligatorio', 'error');
+    setGuardandoManicurista(true);
+    try {
+      const esEdicion = modalManicurista && modalManicurista !== 'nuevo';
+      const url = esEdicion ? `${API_BASE}/manicuristas/${modalManicurista.id}` : `${API_BASE}/manicuristas`;
+      const method = esEdicion ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(formManicurista) });
+      const data = await res.json();
+      if (res.ok) { mostrarAlerta(data.mensaje, 'success'); cerrarFormManicurista(); cargarManicuristas(); }
+      else mostrarAlerta(data.error || 'Error al guardar', 'error');
+    } catch (err) { mostrarAlerta('Error: ' + err.message, 'error'); }
+    finally { setGuardandoManicurista(false); }
+  };
+
+  const desactivarManicurista = async (id) => {
+    if (!window.confirm('¿Desactivar esta manicurista?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/manicuristas/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok) { mostrarAlerta(data.mensaje, 'success'); cargarManicuristas(); }
+      else mostrarAlerta(data.error, 'error');
+    } catch (err) { mostrarAlerta('Error: ' + err.message, 'error'); }
+  };
+
   useEffect(() => {
     cargarServicios();
   }, []);
@@ -219,6 +341,7 @@ function App() {
       if (usuario.rol === 'Administradora' || usuario.rol_id === 2) {
         cargarCitasAdmin();
         cargarDashStats();
+        cargarManicuristas();
       } else {
         cargarMisCitas();
       }
@@ -305,7 +428,7 @@ function App() {
 
   // Reservar uno o varios servicios continuos
   const handleReservar = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     if (!usuario || !token) {
       setAuthError('Inicia sesión o regístrate para confirmar tu cita');
@@ -506,6 +629,7 @@ function App() {
                 { id: 'dashboard', label: 'Dashboard', icon: '◈' },
                 { id: 'citas', label: 'Citas', icon: '📅' },
                 { id: 'servicios', label: 'Servicios', icon: '✨' },
+                { id: 'manicuristas', label: 'Manicuristas', icon: '💅' },
                 { id: 'clientas', label: 'Clientas', icon: '👥' },
               ].map(item => (
                 <button
@@ -838,25 +962,194 @@ function App() {
                 <div className="dash-topbar">
                   <div>
                     <h2 className="dash-title">Catálogo de Servicios</h2>
-                    <p className="dash-subtitle">Todos los servicios disponibles en el salón</p>
+                    <p className="dash-subtitle">Gestiona los servicios del salón — agrega, edita o desactiva</p>
                   </div>
+                  <button className="dash-add-btn" onClick={() => abrirFormServicio()}>
+                    + Nuevo Servicio
+                  </button>
                 </div>
+
+                {/* Modal crear/editar servicio */}
+                {modalServicio && (
+                  <div className="dash-modal-overlay" onClick={cerrarFormServicio}>
+                    <div className="dash-modal" onClick={e => e.stopPropagation()}>
+                      <div className="dash-modal-header">
+                        <h3>{modalServicio === 'nuevo' ? '✦ Nuevo Servicio' : '✎ Editar Servicio'}</h3>
+                        <button className="dash-modal-close" onClick={cerrarFormServicio}>✕</button>
+                      </div>
+                      <form className="dash-modal-form" onSubmit={guardarServicio}>
+                        <div className="dash-form-row">
+                          <div className="dash-form-group">
+                            <label>Nombre del servicio *</label>
+                            <input type="text" value={formServicio.nombre} onChange={e => setFormServicio({...formServicio, nombre: e.target.value})} placeholder="Ej: Manicure en gel" required />
+                          </div>
+                          <div className="dash-form-group">
+                            <label>Categoría</label>
+                            <select value={formServicio.categoria} onChange={e => setFormServicio({...formServicio, categoria: e.target.value})}>
+                              <option value="">Sin categoría</option>
+                              {CATEGORIAS_SERVICIO.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="dash-form-row">
+                          <div className="dash-form-group">
+                            <label>Duración (minutos) *</label>
+                            <input type="number" min="5" max="480" value={formServicio.duracion_min} onChange={e => setFormServicio({...formServicio, duracion_min: e.target.value})} required />
+                          </div>
+                          <div className="dash-form-group">
+                            <label>Precio (COP) *</label>
+                            <input type="number" min="1000" value={formServicio.precio} onChange={e => setFormServicio({...formServicio, precio: e.target.value})} placeholder="Ej: 35000" required />
+                          </div>
+                        </div>
+                        <div className="dash-form-group">
+                          <label>Descripción</label>
+                          <textarea rows="2" value={formServicio.descripcion} onChange={e => setFormServicio({...formServicio, descripcion: e.target.value})} placeholder="Breve descripción del servicio..." />
+                        </div>
+                        <div className="dash-form-group">
+                          <label>URL de imagen (opcional)</label>
+                          <input type="text" value={formServicio.imagen_url} onChange={e => setFormServicio({...formServicio, imagen_url: e.target.value})} placeholder="https://... o /mi-imagen.jpg" />
+                        </div>
+                        <div className="dash-modal-actions">
+                          <button type="button" className="dash-btn-cancel" onClick={cerrarFormServicio}>Cancelar</button>
+                          <button type="submit" className="dash-btn-save" disabled={guardandoServicio}>
+                            {guardandoServicio ? 'Guardando...' : (modalServicio === 'nuevo' ? '+ Crear Servicio' : '✓ Guardar Cambios')}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tabla de servicios */}
                 {cargandoServicios ? (
                   <p className="loading">Cargando servicios...</p>
                 ) : (
-                  <div className="dash-services-grid">
-                    {servicios.map(s => (
-                      <div key={s.id} className="dash-service-card">
-                        <div className="dash-svc-header">
-                          <span className="dash-svc-icon">💅</span>
-                          <div>
-                            <p className="dash-svc-name">{s.nombre}</p>
-                            <p className="dash-svc-desc">{s.descripcion}</p>
-                          </div>
+                  <div className="dash-table-wrap">
+                    <table className="dash-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Servicio</th>
+                          <th>Categoría</th>
+                          <th>Duración</th>
+                          <th>Precio</th>
+                          <th>Estado</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {servicios.map(s => (
+                          <tr key={s.id} className={!s.activo ? 'row-inactivo' : ''}>
+                            <td><strong>#{s.id}</strong></td>
+                            <td>
+                              <strong>{s.nombre}</strong>
+                              {s.descripcion && <><br /><small>{s.descripcion.substring(0, 60)}{s.descripcion.length > 60 ? '…' : ''}</small></>}
+                            </td>
+                            <td><span className="dash-cat-chip">{s.categoria || '—'}</span></td>
+                            <td>⏱ {s.duracion_min} min</td>
+                            <td><strong>${Number(s.precio).toLocaleString()}</strong></td>
+                            <td>
+                              {s.activo !== false && s.activo !== 0
+                                ? <span className="dash-badge-estado estado-2">Activo</span>
+                                : <span className="dash-badge-estado estado-3">Inactivo</span>
+                              }
+                            </td>
+                            <td>
+                              <div className="dash-action-btns">
+                                <button className="dash-act-btn confirm" title="Editar" onClick={() => abrirFormServicio(s)}>✎</button>
+                                {(s.activo !== false && s.activo !== 0)
+                                  ? <button className="dash-act-btn cancel" title="Desactivar" onClick={() => desactivarServicio(s.id)}>✕</button>
+                                  : <button className="dash-act-btn attend" title="Reactivar" onClick={() => reactivarServicio(s)}>↺</button>
+                                }
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── SECCIÓN MANICURISTAS ── */}
+            {dashSeccion === 'manicuristas' && (
+              <div className="dash-content">
+                <div className="dash-topbar">
+                  <div>
+                    <h2 className="dash-title">Manicuristas</h2>
+                    <p className="dash-subtitle">Gestiona el equipo del salón</p>
+                  </div>
+                  <button className="dash-add-btn" onClick={() => { abrirFormManicurista(); cargarManicuristas(); }}>
+                    + Nueva Manicurista
+                  </button>
+                </div>
+
+                {/* Modal crear/editar manicurista */}
+                {modalManicurista && (
+                  <div className="dash-modal-overlay" onClick={cerrarFormManicurista}>
+                    <div className="dash-modal" onClick={e => e.stopPropagation()}>
+                      <div className="dash-modal-header">
+                        <h3>{modalManicurista === 'nuevo' ? '✦ Nueva Manicurista' : '✎ Editar Manicurista'}</h3>
+                        <button className="dash-modal-close" onClick={cerrarFormManicurista}>✕</button>
+                      </div>
+                      <form className="dash-modal-form" onSubmit={guardarManicurista}>
+                        <div className="dash-form-group">
+                          <label>Nombre completo *</label>
+                          <input type="text" value={formManicurista.nombre} onChange={e => setFormManicurista({...formManicurista, nombre: e.target.value})} placeholder="Ej: María González" required />
                         </div>
-                        <div className="dash-svc-footer">
-                          <span className="dash-svc-duration">⏱ {s.duracion_min} min</span>
-                          <span className="dash-svc-price">${Number(s.precio).toLocaleString()} COP</span>
+                        <div className="dash-form-group">
+                          <label>Especialidad</label>
+                          <input type="text" value={formManicurista.especialidad} onChange={e => setFormManicurista({...formManicurista, especialidad: e.target.value})} placeholder="Ej: Uñas acrílicas, Gel, Nail Art" />
+                        </div>
+                        <div className="dash-form-group">
+                          <label>Foto (URL — opcional)</label>
+                          <input type="text" value={formManicurista.foto_url} onChange={e => setFormManicurista({...formManicurista, foto_url: e.target.value})} placeholder="https://..." />
+                        </div>
+                        <div className="dash-modal-actions">
+                          <button type="button" className="dash-btn-cancel" onClick={cerrarFormManicurista}>Cancelar</button>
+                          <button type="submit" className="dash-btn-save" disabled={guardandoManicurista}>
+                            {guardandoManicurista ? 'Guardando...' : (modalManicurista === 'nuevo' ? '+ Agregar' : '✓ Guardar')}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* Grid de manicuristas */}
+                {cargandoManicuristas ? (
+                  <p className="loading">Cargando equipo...</p>
+                ) : manicuristas.length === 0 ? (
+                  <div className="dash-empty-box">Aún no hay manicuristas registradas. ¡Agrega la primera!</div>
+                ) : (
+                  <div className="manicuristas-grid">
+                    {manicuristas.map(m => (
+                      <div key={m.id} className={`manicurista-card ${!m.activo ? 'inactiva' : ''}`}>
+                        <div className="manicurista-avatar">
+                          {m.foto_url
+                            ? <img src={m.foto_url} alt={m.nombre} />
+                            : <span>{m.nombre.charAt(0).toUpperCase()}</span>
+                          }
+                        </div>
+                        <div className="manicurista-info">
+                          <p className="manicurista-nombre">{m.nombre}</p>
+                          <p className="manicurista-esp">{m.especialidad || 'Sin especialidad registrada'}</p>
+                          <span className={`dash-badge-estado ${m.activo ? 'estado-2' : 'estado-3'}`}>
+                            {m.activo ? 'Activa' : 'Inactiva'}
+                          </span>
+                        </div>
+                        <div className="manicurista-actions">
+                          <button className="dash-act-btn confirm" title="Editar" onClick={() => abrirFormManicurista(m)}>✎</button>
+                          {m.activo
+                            ? <button className="dash-act-btn cancel" title="Desactivar" onClick={() => desactivarManicurista(m.id)}>✕</button>
+                            : <button className="dash-act-btn attend" title="Reactivar" onClick={async () => {
+                                const res = await fetch(`${API_BASE}/manicuristas/${m.id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({...m, activo: true}) });
+                                const d = await res.json();
+                                if (res.ok) { mostrarAlerta('Reactivada ✓', 'success'); cargarManicuristas(); }
+                                else mostrarAlerta(d.error, 'error');
+                              }}>↺</button>
+                          }
                         </div>
                       </div>
                     ))}
@@ -951,7 +1244,8 @@ function App() {
           <section id="servicios" className="section">
             <div className="section-header">
               <h2>Nuestros Tratamientos Exclusivos</h2>
-              <p>Puedes elegir hasta un <strong>máximo de 2 servicios</strong> para tu cita (ej. Manicure + Pedicure)</p>
+              {!esAdmin && <p>Puedes elegir hasta un <strong>máximo de 2 servicios</strong> para tu cita (ej. Manicure + Pedicure)</p>}
+              {esAdmin && <p>Vista de catálogo — Para gestionar servicios ve al <button className="link-btn" onClick={() => irA('admin')}>Panel Admin → Servicios</button></p>}
             </div>
 
             {cargandoServicios ? (
@@ -1039,12 +1333,12 @@ function App() {
 
                       <div className="categoria-cards">
                         {grupo.items.map(s => {
-                          const sel = serviciosSeleccionados.some(item => item.id === s.id);
+                          const sel = !esAdmin && serviciosSeleccionados.some(item => item.id === s.id);
                           return (
                             <div
                               key={s.id}
-                              className={`service-card-mini ${sel ? 'selected' : ''}`}
-                              onClick={() => toggleServicio(s)}
+                              className={`service-card-mini ${sel ? 'selected' : ''} ${esAdmin ? 'admin-readonly' : ''}`}
+                              onClick={() => !esAdmin && toggleServicio(s)}
                             >
                               <div className="mini-header-indicator">
                                 <span className="mini-chip-cat">{grupo.nombre.split(' ')[0]}</span>
@@ -1057,9 +1351,11 @@ function App() {
                                   <span className="mini-dur">⏱ {s.duracion_min} min</span>
                                   <span className="mini-price">${Number(s.precio).toLocaleString()}</span>
                                 </div>
-                                <button className={`mini-select-btn ${sel ? 'selected' : ''}`}>
-                                  {sel ? '✓ En tu paquete' : '+ Agregar'}
-                                </button>
+                                {!esAdmin && (
+                                  <button className={`mini-select-btn ${sel ? 'selected' : ''}`}>
+                                    {sel ? '✓ En tu paquete' : '+ Agregar'}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );
@@ -1079,12 +1375,12 @@ function App() {
           )}
 
           {pagina === 'reservar' && !esAdmin && (
-          <section id="reservar" className="section form-section">
-            <div className="form-wrapper">
-              <div className="form-header">
-                <h2>Agenda Tu Espacio</h2>
+          <section id="reservar" className="section reservar-section">
+            <div className="reservar-layout">
 
-                {/* Resumen del paquete / servicios elegidos */}
+              {/* Panel izquierdo — resumen de servicios elegidos */}
+              <div className="reservar-panel-left">
+                <h2>Agenda Tu Espacio</h2>
                 <div className="combo-summary-box">
                   <div className="combo-title">
                     <span>✨ Tu Sesión ({serviciosSeleccionados.length} {serviciosSeleccionados.length === 1 ? 'servicio' : 'servicios'}):</span>
@@ -1104,73 +1400,146 @@ function App() {
 
                 {!usuario && (
                   <p className="login-tip">
-                    ✦ Para reservar, te pediremos identificarte con tu correo o registrarte en un clic.
+                    ✦ Para reservar, inicia sesión o regístrate en un clic.
                   </p>
                 )}
-              </div>
 
-              <form onSubmit={handleReservar} className="booking-form">
-                <div className="form-group">
-                  <label>Fecha de la Sesión</label>
-                  <input
-                    type="date"
-                    required
-                    min={fechaHoy}
-                    value={formReserva.fecha}
-                    onChange={(e) => setFormReserva({ ...formReserva, fecha: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Hora de Inicio</label>
-                  <select
-                    value={formReserva.hora_inicio}
-                    onChange={(e) => setFormReserva({ ...formReserva, hora_inicio: e.target.value })}
-                  >
-                    {HORARIOS_DISPONIBLES.map(h => {
-                      // Proyección: ¿Choca el bloque completo [inicio, inicio + duracionTotal] con alguna cita ocupada?
-                      const [hH, hM] = h.valor.split(':').map(Number);
-                      const minIni = hH * 60 + hM;
-                      const minFin = minIni + duracionTotal;
-
-                      const estaOcupada = horasOcupadas.some(ocupada => {
-                        const [oH1, oM1] = ocupada.hora_inicio.split(':').map(Number);
-                        const [oH2, oM2] = ocupada.hora_fin.split(':').map(Number);
-                        const oMinIni = oH1 * 60 + oM1;
-                        const oMinFin = oH2 * 60 + oM2;
-
-                        return minIni < oMinFin && minFin > oMinIni;
-                      });
-
-                      return (
-                        <option key={h.valor} value={h.valor} disabled={estaOcupada}>
-                          {h.etiqueta} {estaOcupada ? '⛔ (Sin tiempo suficiente)' : '✓ (Disponible)'}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {formReserva.hora_inicio && (
-                  <div className="form-group full info-rango">
-                    <span>🕒 Tu sesión se realizará de <strong>{formReserva.hora_inicio.substring(0, 5)}</strong> a <strong>{calcularHoraFin(formReserva.hora_inicio, duracionTotal)}</strong></span>
+                {/* Hora seleccionada resumen */}
+                {formReserva.fecha && formReserva.hora_inicio && (
+                  <div className="reserva-resumen-box">
+                    <p>📅 <strong>{new Date(formReserva.fecha + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</strong></p>
+                    <p>🕒 <strong>{formReserva.hora_inicio.substring(0,5)}</strong> → <strong>{calcularHoraFin(formReserva.hora_inicio, duracionTotal)}</strong></p>
                   </div>
                 )}
 
-                <div className="form-group full">
-                  <label>Observaciones o diseño personalizado (Opcional)</label>
+                {/* Observaciones */}
+                <div className="form-group">
+                  <label>Notas / diseño personalizado (Opcional)</label>
                   <textarea
                     rows="2"
-                    placeholder="Especifícanos colores, técnicas o referencias que tengas en mente para tus servicios..."
+                    placeholder="Colores, técnicas o referencias que tengas en mente..."
                     value={formReserva.observacion}
                     onChange={(e) => setFormReserva({ ...formReserva, observacion: e.target.value })}
                   />
                 </div>
 
-                <button type="submit" className="submit-btn" disabled={reservaCargando}>
-                  {reservaCargando ? 'Procesando...' : usuario ? `Confirmar Cita ($${precioTotal.toLocaleString()} COP) ✦` : 'Iniciar Sesión y Reservar ✦'}
+                <button
+                  type="button"
+                  className="submit-btn"
+                  disabled={reservaCargando || !formReserva.fecha || !formReserva.hora_inicio}
+                  onClick={handleReservar}
+                >
+                  {reservaCargando ? 'Procesando...' : !formReserva.fecha ? 'Selecciona una fecha →' : !formReserva.hora_inicio ? 'Selecciona una hora →' : usuario ? `Confirmar Cita ($${precioTotal.toLocaleString()} COP) ✦` : 'Iniciar Sesión y Reservar ✦'}
                 </button>
-              </form>
+              </div>
+
+              {/* Panel derecho — CALENDARIO tipo Google */}
+              <div className="reservar-panel-right">
+                {/* Cabecera del mes */}
+                <div className="cal-header">
+                  <button className="cal-nav-btn" onClick={() => {
+                    if (calMes === 0) { setCalMes(11); setCalAnio(calAnio - 1); }
+                    else setCalMes(calMes - 1);
+                    setCalDiaSeleccionado(null);
+                    setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
+                  }}>‹</button>
+                  <h3 className="cal-mes-label">
+                    {new Date(calAnio, calMes).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+                  </h3>
+                  <button className="cal-nav-btn" onClick={() => {
+                    if (calMes === 11) { setCalMes(0); setCalAnio(calAnio + 1); }
+                    else setCalMes(calMes + 1);
+                    setCalDiaSeleccionado(null);
+                    setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
+                  }}>›</button>
+                </div>
+
+                {/* Días de la semana */}
+                <div className="cal-weekdays">
+                  {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => (
+                    <div key={d} className="cal-weekday">{d}</div>
+                  ))}
+                </div>
+
+                {/* Grid de días */}
+                <div className="cal-grid">
+                  {(() => {
+                    const primerDia = new Date(calAnio, calMes, 1).getDay();
+                    const diasEnMes = new Date(calAnio, calMes + 1, 0).getDate();
+                    const hoyStr = new Date().toISOString().split('T')[0];
+                    const celdas = [];
+
+                    // Celdas vacías al inicio
+                    for (let i = 0; i < primerDia; i++) {
+                      celdas.push(<div key={`vacio-${i}`} className="cal-day vacio" />);
+                    }
+
+                    for (let d = 1; d <= diasEnMes; d++) {
+                      const fechaStr = `${calAnio}-${String(calMes + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                      const esPasado = fechaStr < hoyStr;
+                      const esHoy = fechaStr === hoyStr;
+                      const esSeleccionado = fechaStr === formReserva.fecha;
+                      const esDomingo = new Date(calAnio, calMes, d).getDay() === 0; // Cerrado domingos
+
+                      celdas.push(
+                        <button
+                          key={d}
+                          type="button"
+                          disabled={esPasado || esDomingo}
+                          className={`cal-day${esPasado || esDomingo ? ' bloqueado' : ''}${esHoy ? ' hoy' : ''}${esSeleccionado ? ' seleccionado' : ''}`}
+                          onClick={() => {
+                            if (esPasado || esDomingo) return;
+                            setCalDiaSeleccionado(fechaStr);
+                            setFormReserva({ ...formReserva, fecha: fechaStr, hora_inicio: '' });
+                          }}
+                        >
+                          {d}
+                          {esHoy && <span className="cal-hoy-dot" />}
+                        </button>
+                      );
+                    }
+                    return celdas;
+                  })()}
+                </div>
+
+                {/* Slots de horario — aparecen al seleccionar día */}
+                {calDiaSeleccionado && (
+                  <div className="cal-slots">
+                    <p className="cal-slots-title">⏰ Elige tu horario para el {new Date(calDiaSeleccionado + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short' })}:</p>
+                    <div className="cal-slots-grid">
+                      {HORARIOS_DISPONIBLES.map(h => {
+                        const [hH, hM] = h.valor.split(':').map(Number);
+                        const minIni = hH * 60 + hM;
+                        const minFin = minIni + duracionTotal;
+                        const estaOcupada = horasOcupadas.some(ocupada => {
+                          const [oH1, oM1] = ocupada.hora_inicio.split(':').map(Number);
+                          const [oH2, oM2] = ocupada.hora_fin.split(':').map(Number);
+                          return minIni < (oH2 * 60 + oM2) && minFin > (oH1 * 60 + oM1);
+                        });
+                        const seleccionado = formReserva.hora_inicio === h.valor;
+
+                        return (
+                          <button
+                            key={h.valor}
+                            type="button"
+                            disabled={estaOcupada}
+                            className={`cal-slot-btn${estaOcupada ? ' ocupado' : ''}${seleccionado ? ' seleccionado' : ''}`}
+                            onClick={() => !estaOcupada && setFormReserva({ ...formReserva, hora_inicio: h.valor })}
+                          >
+                            {h.etiqueta}
+                            {estaOcupada && <span className="slot-ocupado-label">Ocupado</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!calDiaSeleccionado && (
+                  <p className="cal-hint">👆 Selecciona un día para ver los horarios disponibles</p>
+                )}
+              </div>
+
             </div>
           </section>
           )}
