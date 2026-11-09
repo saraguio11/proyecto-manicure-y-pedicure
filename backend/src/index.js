@@ -35,6 +35,36 @@ app.use('/api/servicios', serviciosRoutes);
 app.use('/api/citas', citasRoutes);
 app.use('/api/manicuristas', manicuristasRoutes);
 
+// Auto-verificar y sincronizar columnas/tablas requeridas en Railway MySQL
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE servicios ADD COLUMN IF NOT EXISTS categoria VARCHAR(80) NULL AFTER imagen_url`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS manicuristas (
+        id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        nombre       VARCHAR(120) NOT NULL,
+        especialidad VARCHAR(150) NULL,
+        foto_url     VARCHAR(255) NULL,
+        activo       TINYINT(1)   NOT NULL DEFAULT 1,
+        creado_en    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+      ) ENGINE=InnoDB
+    `);
+    const [countM] = await pool.query('SELECT COUNT(*) AS total FROM manicuristas');
+    if (countM[0].total === 0) {
+      await pool.query(`
+        INSERT INTO manicuristas (nombre, especialidad, foto_url) VALUES
+        ('Valentina Gómez', 'Especialista en Uñas Acrílicas y Polygel', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'),
+        ('Camila Restrepo', 'Experta en Semipermanente y Nail Art', 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150'),
+        ('Sofía Morales', 'Técnica en Spa Pedicure y Nivelación', 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150')
+      `);
+    }
+    await pool.query(`ALTER TABLE citas ADD COLUMN IF NOT EXISTS manicurista_id INT UNSIGNED NULL AFTER servicio_id`);
+  } catch (err) {
+    console.warn('DB Sync info (continuando normal):', err.message);
+  }
+})();
+
 // =============================================
 // ENDPOINT: Estadísticas para el dashboard admin
 // =============================================
@@ -65,17 +95,19 @@ app.get('/api/admin/stats', verificarToken, soloAdmin, async (req, res) => {
       WHERE c.estado_id IN (2, 4)
     `);
 
-    // Citas de hoy
+    // Citas de hoy (incluye manicurista)
     const [citasHoy] = await pool.query(`
       SELECT c.id, c.hora_inicio, c.hora_fin, c.precio, c.estado_id, c.estado_pago,
              u.nombre_completo AS cliente_nombre,
              s.nombre AS servicio_nombre,
              ec.nombre AS estado_nombre,
-             s.duracion_min
+             s.duracion_min,
+             COALESCE(m.nombre, 'Sin asignar') AS manicurista_nombre
       FROM citas c
       JOIN usuarios u ON u.id = c.usuario_id
       JOIN servicios s ON s.id = c.servicio_id
       JOIN estados_cita ec ON ec.id = c.estado_id
+      LEFT JOIN manicuristas m ON m.id = c.manicurista_id
       WHERE c.fecha = CURRENT_DATE()
         AND c.estado_id != 3
       ORDER BY c.hora_inicio

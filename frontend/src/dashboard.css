@@ -1368,3 +1368,76 @@
   .manicuristas-grid { grid-template-columns: 1fr 1fr; }
   .cal-slots-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+
+/* ═══════════════════════════════════════════════
+   ADMIN BANNER & NAVEGACIÓN LIMPIA (SIN DOBLE SIDEBAR)
+═══════════════════════════════════════════════ */
+.admin-banner-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(82, 3, 128, 0.4), rgba(147, 3, 197, 0.25));
+  border: 1px solid rgba(147, 3, 197, 0.4);
+  border-radius: 14px;
+  padding: 0.75rem 1.4rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(147, 3, 197, 0.15);
+  backdrop-filter: blur(8px);
+}
+.admin-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #f3e8ff;
+  font-size: 0.92rem;
+}
+.admin-banner-crown {
+  font-size: 1.2rem;
+}
+.btn-volver-dash {
+  background: linear-gradient(135deg, #9303C5, #520380);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(147, 3, 197, 0.3);
+}
+.btn-volver-dash:hover {
+  background: linear-gradient(135deg, #b005e8, #6a04a3);
+  transform: translateY(-1px);
+}
+.btn-volver-panel-side {
+  width: 100%;
+  background: linear-gradient(135deg, #9303C5, #520380);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+}
+.btn-volver-panel-side:hover {
+  background: linear-gradient(135deg, #b005e8, #6a04a3);
+}
+.btn-ver-sitio {
+  color: #c084fc !important;
+}
+.btn-ver-sitio:hover {
+  background: rgba(147, 3, 197, 0.2) !important;
+  color: #fff !important;
+}
+.timeline-manicurista {
+  display: block;
+  font-size: 0.72rem;
+  color: #c084fc;
+  font-weight: 600;
+  margin-top: 2px;
+}

@@ -70,7 +70,8 @@ function App() {
   const [formReserva, setFormReserva] = useState({
     fecha: '',
     hora_inicio: '10:00:00',
-    observacion: ''
+    observacion: '',
+    manicurista_id: ''
   });
   const [reservaCargando, setReservaCargando] = useState(false);
   const [horasOcupadas, setHorasOcupadas] = useState([]);
@@ -91,12 +92,14 @@ function App() {
   });
 
   const cargarServicios = () => {
-    fetch(`${API_BASE}/servicios`)
+    const url = esAdmin ? `${API_BASE}/servicios/admin/all` : `${API_BASE}/servicios`;
+    fetch(url, { headers: authHeaders() })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           setServicios(data);
-          if (data.length > 0 && serviciosSeleccionados.length === 0) {
+          // Solo auto-seleccionar si es clienta y no es admin
+          if (!esAdmin && data.length > 0 && serviciosSeleccionados.length === 0) {
             setServiciosSeleccionados([data[0]]);
           }
         }
@@ -106,6 +109,15 @@ function App() {
         mostrarAlerta('No se pudo conectar con el catálogo de servicios', 'error');
       })
       .finally(() => setCargandoServicios(false));
+  };
+
+  const cargarManicuristasPublicas = () => {
+    fetch(`${API_BASE}/manicuristas`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setManicuristas(data);
+      })
+      .catch(err => console.error(err));
   };
 
   // Alternar selección de un servicio (Permite mínimo 1 y máximo 2 servicios por sesión)
@@ -332,9 +344,30 @@ function App() {
     } catch (err) { mostrarAlerta('Error: ' + err.message, 'error'); }
   };
 
+  const asignarManicuristaCita = async (citaId, manicuristaId) => {
+    try {
+      const res = await fetch(`${API_BASE}/citas/${citaId}/estado`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ manicurista_id: manicuristaId || null })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta('Manicurista asignada a la cita ✓', 'success');
+        cargarCitasAdmin();
+        cargarDashStats();
+      } else {
+        mostrarAlerta(data.error || 'Error al asignar manicurista', 'error');
+      }
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    }
+  };
+
   useEffect(() => {
     cargarServicios();
-  }, []);
+    cargarManicuristasPublicas();
+  }, [esAdmin]);
 
   useEffect(() => {
     if (usuario && token) {
@@ -456,6 +489,7 @@ function App() {
         body: JSON.stringify({
           servicios_ids: serviciosSeleccionados.map(s => s.id),
           servicio_id: serviciosSeleccionados[0].id,
+          manicurista_id: formReserva.manicurista_id ? Number(formReserva.manicurista_id) : null,
           fecha: formReserva.fecha,
           hora_inicio: formReserva.hora_inicio,
           observacion: formReserva.observacion
@@ -548,67 +582,77 @@ function App() {
         </div>
       )}
 
-      <button
-        className="sidebar-toggle"
-        type="button"
-        onClick={() => setMenuAbierto((abierto) => !abierto)}
-        aria-label="Abrir menú"
-      >
-        {menuAbierto ? '✕' : '☰'}
-      </button>
-
-      {menuAbierto && <div className="sidebar-overlay" onClick={() => setMenuAbierto(false)} />}
-
-      <aside className={`sidebar ${menuAbierto ? 'abierto' : ''}`}>
-        <div className="sidebar-logo">
-          <span className="sidebar-mark">✦</span>
-          <p>Glam Nails</p>
-        </div>
-
-        <nav className="sidebar-nav">
-          {itemsMenu.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`sidebar-item ${pagina === item.id ? 'active' : ''}`}
-              onClick={() => irA(item.id)}
-            >
-              <span className="sidebar-icon">{item.icono}</span>
-              {item.etiqueta}
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-foot">
+      {/* Si es admin y está en el panel, la sidebar del dashboard toma el control (evita doble sidebar) */}
+      {(!esAdmin || pagina !== 'admin') && (
+        <>
           <button
+            className="sidebar-toggle"
             type="button"
-            className="btn-theme-switch"
-            onClick={toggleTema}
-            title={temaOscuro ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+            onClick={() => setMenuAbierto((abierto) => !abierto)}
+            aria-label="Abrir menú"
           >
-            <span className="theme-switch-icon">{temaOscuro ? '☀️' : '🌙'}</span>
-            <span>{temaOscuro ? 'Modo Claro' : 'Modo Oscuro'}</span>
+            {menuAbierto ? '✕' : '☰'}
           </button>
-          {usuario ? (
-            <>
-              <p className="sidebar-user">
-                {usuario.nombre_completo || usuario.nombre}
-                {esAdmin && <span className="badge-admin">Admin</span>}
-              </p>
-              <button type="button" className="btn-logout" onClick={cerrarSesion}>Cerrar sesión</button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="btn-cliente-login" onClick={() => { setAuthError(''); setTipoModal('login_cliente'); }}>
-                Soy Clienta
+
+          {menuAbierto && <div className="sidebar-overlay" onClick={() => setMenuAbierto(false)} />}
+
+          <aside className={`sidebar ${menuAbierto ? 'abierto' : ''}`}>
+            <div className="sidebar-logo">
+              <span className="sidebar-mark">✦</span>
+              <p>Glam Nails</p>
+            </div>
+
+            <nav className="sidebar-nav">
+              {itemsMenu.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`sidebar-item ${pagina === item.id ? 'active' : ''}`}
+                  onClick={() => irA(item.id)}
+                >
+                  <span className="sidebar-icon">{item.icono}</span>
+                  {item.etiqueta}
+                </button>
+              ))}
+            </nav>
+
+            <div className="sidebar-foot">
+              <button
+                type="button"
+                className="btn-theme-switch"
+                onClick={toggleTema}
+                title={temaOscuro ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+              >
+                <span className="theme-switch-icon">{temaOscuro ? '☀️' : '🌙'}</span>
+                <span>{temaOscuro ? 'Modo Claro' : 'Modo Oscuro'}</span>
               </button>
-              <button type="button" className="btn-admin-access" onClick={() => { setAuthError(''); setTipoModal('login_admin'); }}>
-                Administradora
-              </button>
-            </>
-          )}
-        </div>
-      </aside>
+              {usuario ? (
+                <>
+                  <p className="sidebar-user">
+                    {usuario.nombre_completo || usuario.nombre}
+                    {esAdmin && <span className="badge-admin">Admin</span>}
+                  </p>
+                  {esAdmin && (
+                    <button type="button" className="btn-volver-panel-side" onClick={() => irA('admin')}>
+                      ☰ Ir al Panel Admin
+                    </button>
+                  )}
+                  <button type="button" className="btn-logout" onClick={cerrarSesion}>Cerrar sesión</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn-cliente-login" onClick={() => { setAuthError(''); setTipoModal('login_cliente'); }}>
+                    Soy Clienta
+                  </button>
+                  <button type="button" className="btn-admin-access" onClick={() => { setAuthError(''); setTipoModal('login_admin'); }}>
+                    Administradora
+                  </button>
+                </>
+              )}
+            </div>
+          </aside>
+        </>
+      )}
 
       <div className="app-content">
       {/* PANEL ADMIN EXCLUSIVO — Dashboard estilo moderno */}
@@ -641,6 +685,16 @@ function App() {
                   <span>{item.label}</span>
                 </button>
               ))}
+
+              <button
+                type="button"
+                className="dash-nav-item btn-ver-sitio"
+                onClick={() => irA('inicio')}
+                title="Ver vista pública del salón"
+              >
+                <span className="dash-nav-icon">🌐</span>
+                <span>Ver Sitio Web</span>
+              </button>
             </nav>
 
             <div className="dash-sidebar-foot">
@@ -845,6 +899,7 @@ function App() {
                           <div className="timeline-info">
                             <p className="timeline-nombre">{c.cliente_nombre}</p>
                             <p className="timeline-servicio">{c.servicio_nombre}</p>
+                            <small className="timeline-manicurista">💅 {c.manicurista_nombre || 'Sin manicurista'}</small>
                           </div>
                           <span className={`dash-badge-estado estado-${c.estado_id}`}>{c.estado_nombre}</span>
                           <span className="timeline-precio">${Number(c.precio).toLocaleString()}</span>
@@ -896,6 +951,7 @@ function App() {
                           <th>#</th>
                           <th>Clienta</th>
                           <th>Servicio(s)</th>
+                          <th>Manicurista</th>
                           <th>Fecha & Horario</th>
                           <th>Total</th>
                           <th>Estado</th>
@@ -914,6 +970,19 @@ function App() {
                             <td>
                               <strong>{c.servicio_nombre}</strong>
                               <br /><small>⏱ {c.duracion_min} min</small>
+                            </td>
+                            <td>
+                              <select
+                                value={c.manicurista_id || ''}
+                                className="dash-select-pago"
+                                onChange={(e) => asignarManicuristaCita(c.id, e.target.value)}
+                                title="Asignar o reasignar manicurista"
+                              >
+                                <option value="">(Sin asignar)</option>
+                                {manicuristas.filter(m => m.activo).map(m => (
+                                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                                ))}
+                              </select>
                             </td>
                             <td>
                               📅 {c.fecha?.substring(0, 10)}
@@ -1203,6 +1272,17 @@ function App() {
       ) : (
         /* VISTAS INDEPENDIENTES */
         <main className="page-stage">
+          {esAdmin && (
+            <div className="admin-banner-bar">
+              <div className="admin-banner-text">
+                <span className="admin-banner-crown">👑</span>
+                <span><strong>Modo Administradora activo</strong> — Vista pública del salón</span>
+              </div>
+              <button type="button" className="btn-volver-dash" onClick={() => irA('admin')}>
+                ⬅ Volver al Panel de Control
+              </button>
+            </div>
+          )}
           {pagina === 'inicio' && (
           <section className="hero">
             <span className="badge">Salón & Spa de Alta Gama</span>
@@ -1411,6 +1491,22 @@ function App() {
                     <p>🕒 <strong>{formReserva.hora_inicio.substring(0,5)}</strong> → <strong>{calcularHoraFin(formReserva.hora_inicio, duracionTotal)}</strong></p>
                   </div>
                 )}
+
+                {/* Manicurista de preferencia */}
+                <div className="form-group">
+                  <label>💅 Manicurista de tu preferencia</label>
+                  <select
+                    value={formReserva.manicurista_id}
+                    onChange={(e) => setFormReserva({ ...formReserva, manicurista_id: e.target.value })}
+                  >
+                    <option value="">✨ Cualquiera disponible (Recomendado)</option>
+                    {manicuristas.filter(m => m.activo).map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.nombre} {m.especialidad ? `— ${m.especialidad}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Observaciones */}
                 <div className="form-group">

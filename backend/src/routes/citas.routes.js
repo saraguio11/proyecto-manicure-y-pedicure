@@ -40,11 +40,13 @@ router.get('/', verificarToken, async (req, res) => {
       SELECT c.id, c.fecha, c.hora_inicio, c.hora_fin, c.precio, c.observacion, c.estado_pago,
              s.nombre AS servicio_nombre, s.duracion_min,
              u.nombre_completo AS cliente_nombre, u.telefono AS cliente_telefono, u.correo AS cliente_correo,
-             e.id AS estado_id, e.nombre AS estado_nombre, e.color AS estado_color
+             e.id AS estado_id, e.nombre AS estado_nombre, e.color AS estado_color,
+             c.manicurista_id, COALESCE(m.nombre, 'Sin asignar') AS manicurista_nombre
       FROM citas c
       JOIN servicios s ON c.servicio_id = s.id
       JOIN usuarios u ON c.usuario_id = u.id
       JOIN estados_cita e ON c.estado_id = e.id
+      LEFT JOIN manicuristas m ON c.manicurista_id = m.id
       WHERE 1=1
     `;
     const params = [];
@@ -84,7 +86,7 @@ router.get('/', verificarToken, async (req, res) => {
 router.patch('/:id/estado', verificarToken, soloAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado_id, estado_pago } = req.body;
+    const { estado_id, estado_pago, manicurista_id } = req.body;
 
     if (!id || isNaN(Number(id))) {
       return res.status(400).json({ error: 'Identificador de cita inválido' });
@@ -110,6 +112,11 @@ router.patch('/:id/estado', verificarToken, soloAdmin, async (req, res) => {
       params.push(estado_pago);
     }
 
+    if (manicurista_id !== undefined) {
+      updates.push('manicurista_id = ?');
+      params.push(manicurista_id ? Number(manicurista_id) : null);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No se enviaron datos para actualizar' });
     }
@@ -129,7 +136,7 @@ router.patch('/:id/estado', verificarToken, soloAdmin, async (req, res) => {
 // ==========================================
 router.post('/', verificarToken, async (req, res) => {
   try {
-    const { servicios_ids, servicio_id, fecha, hora_inicio, observacion } = req.body;
+    const { servicios_ids, servicio_id, manicurista_id, fecha, hora_inicio, observacion } = req.body;
     const usuario_id = req.usuario.id;
 
     // Acepta arreglo de servicios o un único servicio
@@ -207,10 +214,11 @@ router.post('/', verificarToken, async (req, res) => {
       ? `[Combo de ${serviciosEncontrados.length} servicios: ${nombresServicios}] ${observacion ? '— ' + String(observacion).trim() : ''}`
       : (observacion ? String(observacion).trim() : null);
 
+    const mId = manicurista_id ? Number(manicurista_id) : null;
     const [result] = await pool.execute(
-      `INSERT INTO citas (usuario_id, servicio_id, estado_id, fecha, hora_inicio, hora_fin, precio, observacion, estado_pago)
-       VALUES (?, ?, 1, ?, ?, ?, ?, ?, 'pendiente')`,
-      [usuario_id, primerServicioId, fecha, horaInicioFormatted, horaFinCalculada, precioTotal, notaCompleta]
+      `INSERT INTO citas (usuario_id, servicio_id, manicurista_id, estado_id, fecha, hora_inicio, hora_fin, precio, observacion, estado_pago)
+       VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, 'pendiente')`,
+      [usuario_id, primerServicioId, mId, fecha, horaInicioFormatted, horaFinCalculada, precioTotal, notaCompleta]
     );
 
     res.status(201).json({
