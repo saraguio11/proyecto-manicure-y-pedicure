@@ -21,6 +21,8 @@ function App() {
     return sesion ? JSON.parse(sesion) : null;
   });
 
+  const esAdmin = usuario?.rol === 'Administradora' || usuario?.rol_id === 2;
+
   const [tipoModal, setTipoModal] = useState(null);
   const [authForm, setAuthForm] = useState({
     correo: '',
@@ -549,8 +551,6 @@ function App() {
       mostrarAlerta('Error: ' + err.message, 'error');
     }
   };
-
-  const esAdmin = usuario?.rol === 'Administradora' || usuario?.rol_id === 2;
 
   useEffect(() => {
     if (esAdmin) setPagina('admin');
