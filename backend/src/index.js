@@ -35,10 +35,27 @@ app.use('/api/servicios', serviciosRoutes);
 app.use('/api/citas', citasRoutes);
 app.use('/api/manicuristas', manicuristasRoutes);
 
+// Función universal para agregar columnas de forma segura en cualquier versión de MySQL
+async function agregarColumnaSiNoExiste(tabla, columna, definicion) {
+  try {
+    const [cols] = await pool.query(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+      [tabla, columna]
+    );
+    if (cols.length === 0) {
+      await pool.query(`ALTER TABLE \`${tabla}\` ADD COLUMN \`${columna}\` ${definicion}`);
+      console.log(`✓ Columna '${columna}' agregada con éxito a '${tabla}'`);
+    }
+  } catch (err) {
+    console.warn(`Aviso al verificar columna ${columna} en ${tabla}:`, err.message);
+  }
+}
+
 // Auto-verificar y sincronizar columnas/tablas requeridas en Railway MySQL
 (async () => {
   try {
-    await pool.query(`ALTER TABLE servicios ADD COLUMN IF NOT EXISTS categoria VARCHAR(80) NULL AFTER imagen_url`);
+    await agregarColumnaSiNoExiste('servicios', 'categoria', 'VARCHAR(80) NULL AFTER imagen_url');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS manicuristas (
         id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -59,7 +76,7 @@ app.use('/api/manicuristas', manicuristasRoutes);
         ('Sofía Morales', 'Técnica en Spa Pedicure y Nivelación', 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150')
       `);
     }
-    await pool.query(`ALTER TABLE citas ADD COLUMN IF NOT EXISTS manicurista_id INT UNSIGNED NULL AFTER servicio_id`);
+    await agregarColumnaSiNoExiste('citas', 'manicurista_id', 'INT UNSIGNED NULL AFTER servicio_id');
   } catch (err) {
     console.warn('DB Sync info (continuando normal):', err.message);
   }
