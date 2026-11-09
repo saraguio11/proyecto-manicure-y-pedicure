@@ -12,6 +12,17 @@ const IMAGENES_SERVICIOS = {
   4: '/unas-acrilicas.png',
 };
 
+const SERVICIOS_DEFAULT = [
+  { id: 1, nombre: 'Manicure tradicional', descripcion: 'Limado, cutícula y esmaltado tradicional.', duracion_min: 45, precio: 25000, categoria: '💅 Manicura' },
+  { id: 2, nombre: 'Manicure en gel', descripcion: 'Esmaltado semipermanente con acabado brillante.', duracion_min: 60, precio: 40000, categoria: '💅 Manicura' },
+  { id: 3, nombre: 'Pedicure tradicional', descripcion: 'Limpieza, exfoliación y esmaltado de pies.', duracion_min: 60, precio: 30000, categoria: '🦶 Pedicure' },
+  { id: 4, nombre: 'Uñas acrílicas', descripcion: 'Extensión de uñas con acrílico y diseño a elección.', duracion_min: 120, precio: 80000, categoria: '💅 Manicura' },
+  { id: 5, nombre: 'Semipermanente', descripcion: 'Esmaltado semipermanente de larga duración con curado en lámpara.', duracion_min: 60, precio: 38000, categoria: '💅 Manicura' },
+  { id: 6, nombre: 'Semipermanente con Rubber Base', descripcion: 'Esmaltado semipermanente con base rubber que refuerza y protege la uña natural.', duracion_min: 60, precio: 40000, categoria: '💅 Manicura' },
+  { id: 7, nombre: 'Dipping', descripcion: 'Técnica de inmersión en polvo acrílico para uñas resistentes.', duracion_min: 60, precio: 45000, categoria: '💅 Manicura' },
+  { id: 8, nombre: 'Nivelación', descripcion: 'Corrección y nivelado de la superficie de la uña.', duracion_min: 75, precio: 50000, categoria: '💅 Manicura' }
+];
+
 const IMAGEN_MODAL = '/login-art.png';
 
 function App() {
@@ -63,10 +74,10 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const [servicios, setServicios] = useState([]);
+  const [servicios, setServicios] = useState(SERVICIOS_DEFAULT);
   // Ahora soportamos selección múltiple de servicios (Combo / Paquete de belleza)
-  const [serviciosSeleccionados, setServiciosSeleccionados] = useState([]);
-  const [cargandoServicios, setCargandoServicios] = useState(true);
+  const [serviciosSeleccionados, setServiciosSeleccionados] = useState([SERVICIOS_DEFAULT[0]]);
+  const [cargandoServicios, setCargandoServicios] = useState(false);
 
   const fechaHoy = new Date().toISOString().split('T')[0];
   const [formReserva, setFormReserva] = useState({
@@ -98,17 +109,14 @@ function App() {
     fetch(url, { headers: authHeaders() })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           setServicios(data);
-          // Solo auto-seleccionar si es clienta y no es admin
-          if (!esAdmin && data.length > 0 && serviciosSeleccionados.length === 0) {
-            setServiciosSeleccionados([data[0]]);
-          }
+          // Si no había ninguno seleccionado, seleccionar el primero
+          setServiciosSeleccionados(prev => (prev.length === 0 ? [data[0]] : prev));
         }
       })
       .catch(err => {
-        console.error(err);
-        mostrarAlerta('No se pudo conectar con el catálogo de servicios', 'error');
+        console.warn('Usando catálogo inicial (offline/sync):', err);
       })
       .finally(() => setCargandoServicios(false));
   };
@@ -143,14 +151,16 @@ function App() {
   };
 
   // Totales acumulados de la selección
-  const duracionTotal = serviciosSeleccionados.reduce((acc, s) => acc + Number(s.duracion_min), 0);
-  const precioTotal = serviciosSeleccionados.reduce((acc, s) => acc + Number(s.precio), 0);
+  const duracionTotal = serviciosSeleccionados.reduce((acc, s) => acc + (Number(s.duracion_min) || 45), 0);
+  const precioTotal = serviciosSeleccionados.reduce((acc, s) => acc + (Number(s.precio) || 0), 0);
 
   // Calcular la hora fin proyectada
   const calcularHoraFin = (hInicio, duracionMin) => {
     if (!hInicio) return '';
+    const dur = Number(duracionMin) || 0;
+    if (dur <= 0) return hInicio.substring(0, 5);
     const [h, m] = hInicio.split(':').map(Number);
-    const minTotales = h * 60 + m + duracionMin;
+    const minTotales = h * 60 + m + dur;
     const finH = String(Math.floor(minTotales / 60)).padStart(2, '0');
     const finM = String(minTotales % 60).padStart(2, '0');
     return `${finH}:${finM}`;
@@ -1461,6 +1471,65 @@ function App() {
               {/* Panel izquierdo — resumen de servicios elegidos */}
               <div className="reservar-panel-left">
                 <h2>Agenda Tu Espacio</h2>
+
+                {/* Selector interactivo de tratamiento(s) para la reserva */}
+                <div className="reserva-selector-tratamientos">
+                  <label className="reserva-label-titulo">💅 Tratamiento(s) a reservar:</label>
+
+                  {/* Servicio 1 */}
+                  <div className="reserva-combo-row">
+                    <span className="reserva-row-badge">1</span>
+                    <select
+                      className="reserva-dropdown"
+                      value={serviciosSeleccionados[0]?.id || ''}
+                      onChange={(e) => {
+                        const idSel = Number(e.target.value);
+                        const svc = servicios.find(s => s.id === idSel);
+                        if (svc) {
+                          const segundo = serviciosSeleccionados[1];
+                          setServiciosSeleccionados(segundo && segundo.id !== svc.id ? [svc, segundo] : [svc]);
+                        }
+                      }}
+                    >
+                      {servicios.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre} · ⏱ {s.duracion_min}m · ${Number(s.precio).toLocaleString()} COP
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Servicio 2 (Opcional - Combo) */}
+                  <div className="reserva-combo-row">
+                    <span className="reserva-row-badge">2</span>
+                    <select
+                      className="reserva-dropdown"
+                      value={serviciosSeleccionados[1]?.id || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          setServiciosSeleccionados([serviciosSeleccionados[0] || servicios[0]]);
+                        } else {
+                          const idSel = Number(val);
+                          const svc = servicios.find(s => s.id === idSel);
+                          if (svc) {
+                            setServiciosSeleccionados([serviciosSeleccionados[0] || servicios[0], svc]);
+                          }
+                        }
+                      }}
+                    >
+                      <option value="">+ Añadir segundo servicio (Combo opcional)...</option>
+                      {servicios
+                        .filter(s => s.id !== serviciosSeleccionados[0]?.id)
+                        .map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.nombre} · ⏱ {s.duracion_min}m · ${Number(s.precio).toLocaleString()} COP
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="combo-summary-box">
                   <div className="combo-title">
                     <span>✨ Tu Sesión ({serviciosSeleccionados.length} {serviciosSeleccionados.length === 1 ? 'servicio' : 'servicios'}):</span>
@@ -1488,7 +1557,10 @@ function App() {
                 {formReserva.fecha && formReserva.hora_inicio && (
                   <div className="reserva-resumen-box">
                     <p>📅 <strong>{new Date(formReserva.fecha + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</strong></p>
-                    <p>🕒 <strong>{formReserva.hora_inicio.substring(0,5)}</strong> → <strong>{calcularHoraFin(formReserva.hora_inicio, duracionTotal)}</strong></p>
+                    <p>
+                      🕒 <strong>{formReserva.hora_inicio.substring(0,5)}</strong> → <strong>{calcularHoraFin(formReserva.hora_inicio, duracionTotal)}</strong>
+                      <span className="reserva-dur-pill">⏱ {duracionTotal} min</span>
+                    </p>
                   </div>
                 )}
 

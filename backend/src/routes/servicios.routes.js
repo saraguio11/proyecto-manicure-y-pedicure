@@ -9,9 +9,17 @@ const router = Router();
 // ─────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const [servicios] = await pool.query(
-      'SELECT id, nombre, descripcion, duracion_min, precio, imagen_url, categoria FROM servicios WHERE activo = 1 ORDER BY id ASC'
-    );
+    let servicios;
+    try {
+      [servicios] = await pool.query(
+        'SELECT id, nombre, descripcion, duracion_min, precio, imagen_url, categoria FROM servicios WHERE activo = 1 ORDER BY id ASC'
+      );
+    } catch (colErr) {
+      // Fallback si la columna categoria no ha sido creada aún en Railway
+      [servicios] = await pool.query(
+        'SELECT id, nombre, descripcion, duracion_min, precio, imagen_url FROM servicios WHERE activo = 1 ORDER BY id ASC'
+      );
+    }
     res.json(servicios);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -23,9 +31,16 @@ router.get('/', async (req, res) => {
 // ─────────────────────────────────────────────
 router.get('/admin/all', verificarToken, soloAdmin, async (req, res) => {
   try {
-    const [servicios] = await pool.query(
-      'SELECT id, nombre, descripcion, duracion_min, precio, imagen_url, categoria, activo FROM servicios ORDER BY id ASC'
-    );
+    let servicios;
+    try {
+      [servicios] = await pool.query(
+        'SELECT id, nombre, descripcion, duracion_min, precio, imagen_url, categoria, activo FROM servicios ORDER BY id ASC'
+      );
+    } catch (colErr) {
+      [servicios] = await pool.query(
+        'SELECT id, nombre, descripcion, duracion_min, precio, imagen_url, activo FROM servicios ORDER BY id ASC'
+      );
+    }
     res.json(servicios);
   } catch (error) {
     res.status(500).json({ error: error.message });
