@@ -25,6 +25,71 @@ const SERVICIOS_DEFAULT = [
 
 const IMAGEN_MODAL = '/login-art.png';
 
+const DIAS_SEMANA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+
+const GCAL_HORAS = [
+  { hora: 8, etiqueta: '8 AM', valor: '08:00:00' },
+  { hora: 9, etiqueta: '9 AM', valor: '09:00:00' },
+  { hora: 10, etiqueta: '10 AM', valor: '10:00:00' },
+  { hora: 11, etiqueta: '11 AM', valor: '11:00:00' },
+  { hora: 12, etiqueta: '12 PM', valor: '12:00:00' },
+  { hora: 13, etiqueta: '1 PM', valor: '13:00:00' },
+  { hora: 14, etiqueta: '2 PM', valor: '14:00:00' },
+  { hora: 15, etiqueta: '3 PM', valor: '15:00:00' },
+  { hora: 16, etiqueta: '4 PM', valor: '16:00:00' },
+  { hora: 17, etiqueta: '5 PM', valor: '17:00:00' },
+  { hora: 18, etiqueta: '6 PM', valor: '18:00:00' },
+  { hora: 19, etiqueta: '7 PM', valor: '19:00:00' },
+  { hora: 20, etiqueta: '8 PM', valor: '20:00:00' },
+  { hora: 21, etiqueta: '9 PM', valor: '21:00:00' },
+  { hora: 22, etiqueta: '10 PM', valor: '22:00:00' }
+];
+
+const formatearHora12 = (horaStr) => {
+  if (!horaStr) return '';
+  const [h, m] = horaStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return horaStr;
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const mStr = String(m).padStart(2, '0');
+  return `${h12}:${mStr} ${ampm}`;
+};
+
+const sumarDias = (fechaStr, delta) => {
+  if (!fechaStr) return '';
+  const d = new Date(fechaStr + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  return d.toISOString().split('T')[0];
+};
+
+const calcularPosicionesEventos = (eventos) => {
+  const evs = [...eventos].sort((a, b) => (a.hora_inicio || '').localeCompare(b.hora_inicio || ''));
+  return evs.map((e, idx) => {
+    const [hI, mI] = (e.hora_inicio || '08:00').split(':').map(Number);
+    const startMin = (hI * 60 + mI);
+    const [hF, mF] = (e.hora_fin || '').split(':').map(Number);
+    const endMin = (!isNaN(hF) && !isNaN(mF)) ? (hF * 60 + mF) : (startMin + (Number(e.duracion_min) || 60));
+    const durMin = Math.max(endMin - startMin, 35);
+    const top = startMin - 480;
+
+    const colisiona = idx > 0 && (() => {
+      const prev = evs[idx - 1];
+      const [pHI, pMI] = (prev.hora_inicio || '08:00').split(':').map(Number);
+      const [pHF, pMF] = (prev.hora_fin || '').split(':').map(Number);
+      const pStart = pHI * 60 + pMI;
+      const pEnd = (!isNaN(pHF) && !isNaN(pMF)) ? (pHF * 60 + pMF) : (pStart + (Number(prev.duracion_min) || 60));
+      return startMin < pEnd;
+    })();
+
+    return {
+      ...e,
+      topPx: top,
+      heightPx: durMin,
+      colisiona
+    };
+  });
+};
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('token_spa') || '');
   const [usuario, setUsuario] = useState(() => {
@@ -81,13 +146,28 @@ function App() {
 
   const fechaHoy = new Date().toISOString().split('T')[0];
   const [formReserva, setFormReserva] = useState({
-    fecha: '',
+    fecha: fechaHoy,
     hora_inicio: '10:00:00',
     observacion: '',
     manicurista_id: ''
   });
   const [reservaCargando, setReservaCargando] = useState(false);
   const [horasOcupadas, setHorasOcupadas] = useState([]);
+  const [vistaCalendario, setVistaCalendario] = useState('dia'); // 'dia' (Google Calendar) | 'mes'
+  const [vistaCitasAdmin, setVistaCitasAdmin] = useState('calendario'); // 'tabla' | 'calendario'
+  const [fechaAdminGcal, setFechaAdminGcal] = useState(fechaHoy);
+  const [citasGcalAdmin, setCitasGcalAdmin] = useState([]);
+  const [citaDetalleModal, setCitaDetalleModal] = useState(null);
+
+  const cargarCitasGcalAdmin = (f) => {
+    const targetFecha = f || fechaAdminGcal;
+    fetch(`${API_BASE}/citas/disponibilidad?fecha=${targetFecha}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setCitasGcalAdmin(data);
+      })
+      .catch(err => console.error(err));
+  };
 
   const HORARIOS_DISPONIBLES = [
     { valor: '08:00:00', etiqueta: '08:00 AM' },
@@ -206,6 +286,201 @@ function App() {
       })
       .catch(err => console.error(err));
   }, [formReserva.fecha]);
+
+  useEffect(() => {
+    if (esAdmin && dashSeccion === 'citas' && vistaCitasAdmin === 'calendario') {
+      cargarCitasGcalAdmin(fechaAdminGcal);
+    }
+  }, [esAdmin, dashSeccion, vistaCitasAdmin, fechaAdminGcal]);
+
+  const renderGoogleCalendar = ({
+    fecha,
+    citas,
+    esAdminMode = false,
+    onCambiarFecha,
+    onSeleccionarHora,
+    horaSeleccionada = '',
+    duracion = 60
+  }) => {
+    const dObj = new Date(fecha + 'T12:00:00');
+    const diaSemana = DIAS_SEMANA_CORTO[dObj.getDay()] || 'LUN';
+    const diaNum = dObj.getDate();
+    const esDiaHoy = fecha === fechaHoy;
+    const ahora = new Date();
+    const minActuales = ahora.getHours() * 60 + ahora.getMinutes();
+    const redLineVisible = esDiaHoy && minActuales >= 480 && minActuales <= 1320;
+    const redLineTop = minActuales - 480;
+
+    const eventosPosicionados = calcularPosicionesEventos(citas || []);
+
+    return (
+      <div className="gcal-container">
+        {/* Cabecera Google Calendar */}
+        <div className="gcal-header">
+          <div className="gcal-header-left">
+            <button
+              type="button"
+              className="gcal-nav-btn"
+              onClick={() => onCambiarFecha(sumarDias(fecha, -1))}
+              title="Día anterior"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="gcal-today-btn"
+              onClick={() => onCambiarFecha(fechaHoy)}
+              title="Ir al día de hoy"
+            >
+              Hoy
+            </button>
+            <button
+              type="button"
+              className="gcal-nav-btn"
+              onClick={() => onCambiarFecha(sumarDias(fecha, 1))}
+              title="Día siguiente"
+            >
+              ›
+            </button>
+            <input
+              type="date"
+              className="gcal-date-picker-input"
+              value={fecha}
+              onChange={(e) => e.target.value && onCambiarFecha(e.target.value)}
+              title="Elegir fecha"
+            />
+          </div>
+
+          <div className="gcal-header-center">
+            <div className="gcal-day-badge-wrap">
+              <span className="gcal-day-name">{diaSemana}</span>
+              <span className={`gcal-day-circle ${esDiaHoy ? 'is-today' : ''}`}>{diaNum}</span>
+            </div>
+            <div className="gcal-date-label-full">
+              {dObj.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+
+          <div className="gcal-header-right">
+            <span className="gcal-timezone-tag">GMT-5</span>
+            {!esAdminMode && (
+              <span className="gcal-hint-badge">💡 Toca cualquier espacio libre para fijar tu horario</span>
+            )}
+          </div>
+        </div>
+
+        {/* Cuerpo del calendario: Timeline de 8 AM a 10 PM */}
+        <div className="gcal-scroll-body">
+          <div className="gcal-timeline-layout">
+            {/* Columna izquierda de horas */}
+            <div className="gcal-time-axis">
+              {GCAL_HORAS.map(h => (
+                <div key={h.hora} className="gcal-axis-hour">
+                  <span>{h.etiqueta}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Canvas de la grilla y bloques de eventos */}
+            <div className="gcal-grid-canvas">
+              {/* Líneas horizontales de cada hora */}
+              {GCAL_HORAS.map(h => (
+                <div
+                  key={h.hora}
+                  className="gcal-grid-row"
+                  onClick={() => {
+                    if (!esAdminMode && onSeleccionarHora && fecha >= fechaHoy) {
+                      onSeleccionarHora(h.valor);
+                    }
+                  }}
+                  title={!esAdminMode && fecha >= fechaHoy ? `Click para reservar a las ${h.etiqueta}` : ''}
+                >
+                  <div className="gcal-half-hour-line" />
+                </div>
+              ))}
+
+              {/* Línea roja de hora actual de Google Calendar */}
+              {redLineVisible && (
+                <div className="gcal-now-line" style={{ top: `${redLineTop}px` }}>
+                  <span className="gcal-now-dot" />
+                </div>
+              )}
+
+              {/* Eventos / Citas agendadas */}
+              {eventosPosicionados.map(c => {
+                const anchoStyle = c.colisiona
+                  ? { width: 'calc(50% - 10px)', left: 'calc(50% + 4px)' }
+                  : { width: 'calc(100% - 12px)', left: '6px' };
+
+                return (
+                  <div
+                    key={c.id}
+                    className={`gcal-event-block estado-${c.estado_id || 1}`}
+                    style={{
+                      top: `${Math.max(c.topPx, 0)}px`,
+                      height: `${Math.max(c.heightPx, 38)}px`,
+                      ...anchoStyle
+                    }}
+                    onClick={() => {
+                      if (esAdminMode) setCitaDetalleModal(c);
+                    }}
+                    title={`Cita de ${c.cliente_nombre || 'Clienta'}: ${c.servicio_nombre} (${c.hora_inicio?.substring(0,5)} - ${c.hora_fin?.substring(0,5)})`}
+                  >
+                    <div className="gcal-event-title">
+                      💅 {c.servicio_nombre || 'Cita de salón'}
+                    </div>
+                    <div className="gcal-event-time">
+                      🕒 {formatearHora12(c.hora_inicio)} – {formatearHora12(c.hora_fin)}
+                    </div>
+                    <div className="gcal-event-client">
+                      👤 {c.cliente_nombre || 'Clienta'}
+                    </div>
+                    {c.manicurista_nombre && (
+                      <div className="gcal-event-staff">
+                        ✨ {c.manicurista_nombre}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Bloque interactivo de reserva seleccionada por el cliente */}
+              {!esAdminMode && horaSeleccionada && fecha >= fechaHoy && (() => {
+                const [hB, mB] = horaSeleccionada.split(':').map(Number);
+                if (isNaN(hB) || isNaN(mB)) return null;
+                const startB = hB * 60 + mB;
+                const topB = startB - 480;
+                const heightB = Math.max(duracion, 40);
+                const hFin = calcularHoraFin(horaSeleccionada, duracion);
+
+                return (
+                  <div
+                    className="gcal-booking-preview"
+                    style={{
+                      top: `${Math.max(topB, 0)}px`,
+                      height: `${heightB}px`,
+                      width: 'calc(100% - 12px)',
+                      left: '6px'
+                    }}
+                  >
+                    <div className="gcal-preview-badge">✨ TU RESERVA SELECCIONADA</div>
+                    <div className="gcal-preview-title">
+                      {serviciosSeleccionados.map(s => s.nombre).join(' + ')}
+                    </div>
+                    <div className="gcal-preview-meta">
+                      🕒 {formatearHora12(horaSeleccionada)} → {formatearHora12(hFin)}
+                      <span className="gcal-preview-dur">⏱ {duracion} min</span>
+                      <span className="gcal-preview-price">💵 ${precioTotal.toLocaleString()} COP</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const cargarMisCitas = () => {
     if (!token) return;
@@ -931,25 +1206,146 @@ function App() {
                 <div className="dash-topbar">
                   <div>
                     <h2 className="dash-title">Gestión de Citas</h2>
-                    <p className="dash-subtitle">Revisa, confirma y gestiona todas las citas</p>
+                    <p className="dash-subtitle">Agenda en tiempo real con Google Calendar y vista tabular</p>
                   </div>
                   <div className="dash-topbar-actions">
-                    <select
-                      value={filtroEstado}
-                      onChange={(e) => setFiltroEstado(e.target.value)}
-                      className="dash-select"
-                    >
-                      <option value="">Todas</option>
-                      <option value="1">Pendientes</option>
-                      <option value="2">Confirmadas</option>
-                      <option value="4">Atendidas</option>
-                      <option value="3">Canceladas</option>
-                    </select>
-                    <button onClick={cargarCitasAdmin} className="dash-refresh-btn">🔄 Refrescar</button>
+                    <div className="dash-view-selector-tabs">
+                      <button
+                        type="button"
+                        className={`dash-tab-btn ${vistaCitasAdmin === 'calendario' ? 'active' : ''}`}
+                        onClick={() => {
+                          setVistaCitasAdmin('calendario');
+                          cargarCitasGcalAdmin(fechaAdminGcal);
+                        }}
+                      >
+                        📆 Google Calendar (Día)
+                      </button>
+                      <button
+                        type="button"
+                        className={`dash-tab-btn ${vistaCitasAdmin === 'tabla' ? 'active' : ''}`}
+                        onClick={() => setVistaCitasAdmin('tabla')}
+                      >
+                        📋 Tabla de Citas
+                      </button>
+                    </div>
+
+                    {vistaCitasAdmin === 'tabla' && (
+                      <select
+                        value={filtroEstado}
+                        onChange={(e) => setFiltroEstado(e.target.value)}
+                        className="dash-select"
+                      >
+                        <option value="">Todas</option>
+                        <option value="1">Pendientes</option>
+                        <option value="2">Confirmadas</option>
+                        <option value="4">Atendidas</option>
+                        <option value="3">Canceladas</option>
+                      </select>
+                    )}
+                    <button onClick={() => { cargarCitasAdmin(); cargarCitasGcalAdmin(fechaAdminGcal); }} className="dash-refresh-btn">🔄 Refrescar</button>
                   </div>
                 </div>
 
-                {cargandoCitas ? (
+                {/* Modal de Detalle de Cita desde Google Calendar */}
+                {citaDetalleModal && (
+                  <div className="dash-modal-overlay" onClick={() => setCitaDetalleModal(null)}>
+                    <div className="dash-modal" onClick={e => e.stopPropagation()}>
+                      <div className="dash-modal-header">
+                        <h3>📅 Detalle de Cita #{citaDetalleModal.id}</h3>
+                        <button className="dash-modal-close" onClick={() => setCitaDetalleModal(null)}>✕</button>
+                      </div>
+                      <div className="dash-modal-body" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Clienta</label>
+                          <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem' }}>👤 {citaDetalleModal.cliente_nombre || 'Clienta'}</p>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Servicio(s) a Realizar</label>
+                          <p style={{ margin: 0, fontWeight: 700, color: '#9303C5' }}>💅 {citaDetalleModal.servicio_nombre}</p>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                          <div>
+                            <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Fecha y Horario</label>
+                            <p style={{ margin: 0, fontWeight: 600 }}>
+                              📅 {citaDetalleModal.fecha || fechaAdminGcal}<br />
+                              🕒 {formatearHora12(citaDetalleModal.hora_inicio)} – {formatearHora12(citaDetalleModal.hora_fin)}
+                            </p>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Inversión / Precio</label>
+                            <p style={{ margin: 0, fontWeight: 700, color: '#10B981', fontSize: '1.1rem' }}>
+                              ${Number(citaDetalleModal.precio || 0).toLocaleString()} COP
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Manicurista Asignada</label>
+                          <p style={{ margin: 0, fontWeight: 600 }}>💅 {citaDetalleModal.manicurista_nombre || 'Sin asignar'}</p>
+                        </div>
+                        {citaDetalleModal.observacion && (
+                          <div>
+                            <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Notas de la Reserva</label>
+                            <p style={{ margin: 0, background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem' }}>
+                              {citaDetalleModal.observacion}
+                            </p>
+                          </div>
+                        )}
+                        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="dash-act-btn confirm"
+                            style={{ padding: '0.6rem 1rem', width: 'auto', height: 'auto', borderRadius: '8px' }}
+                            onClick={() => {
+                              actualizarEstadoCita(citaDetalleModal.id, 2);
+                              setCitaDetalleModal(null);
+                              cargarCitasGcalAdmin(fechaAdminGcal);
+                            }}
+                          >
+                            ✓ Confirmar Cita
+                          </button>
+                          <button
+                            type="button"
+                            className="dash-act-btn attend"
+                            style={{ padding: '0.6rem 1rem', width: 'auto', height: 'auto', borderRadius: '8px' }}
+                            onClick={() => {
+                              actualizarEstadoCita(citaDetalleModal.id, 4);
+                              setCitaDetalleModal(null);
+                              cargarCitasGcalAdmin(fechaAdminGcal);
+                            }}
+                          >
+                            🌟 Marcar Atendida
+                          </button>
+                          <button
+                            type="button"
+                            className="dash-act-btn cancel"
+                            style={{ padding: '0.6rem 1rem', width: 'auto', height: 'auto', borderRadius: '8px' }}
+                            onClick={() => {
+                              actualizarEstadoCita(citaDetalleModal.id, 3);
+                              setCitaDetalleModal(null);
+                              cargarCitasGcalAdmin(fechaAdminGcal);
+                            }}
+                          >
+                            ✕ Cancelar Cita
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {vistaCitasAdmin === 'calendario' ? (
+                  <div className="dash-gcal-wrapper">
+                    {renderGoogleCalendar({
+                      fecha: fechaAdminGcal,
+                      citas: citasGcalAdmin,
+                      esAdminMode: true,
+                      onCambiarFecha: (nuevaF) => {
+                        setFechaAdminGcal(nuevaF);
+                        cargarCitasGcalAdmin(nuevaF);
+                      }
+                    })}
+                  </div>
+                ) : cargandoCitas ? (
                   <p className="loading">Cargando citas...</p>
                 ) : citasAdmin.length === 0 ? (
                   <div className="dash-empty-box">No hay citas registradas con este filtro.</div>
@@ -1601,110 +1997,168 @@ function App() {
                 </button>
               </div>
 
-              {/* Panel derecho — CALENDARIO tipo Google */}
+              {/* Panel derecho — CALENDARIO interactivo tipo Google */}
               <div className="reservar-panel-right">
-                {/* Cabecera del mes */}
-                <div className="cal-header">
-                  <button className="cal-nav-btn" onClick={() => {
-                    if (calMes === 0) { setCalMes(11); setCalAnio(calAnio - 1); }
-                    else setCalMes(calMes - 1);
-                    setCalDiaSeleccionado(null);
-                    setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
-                  }}>‹</button>
-                  <h3 className="cal-mes-label">
-                    {new Date(calAnio, calMes).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
-                  </h3>
-                  <button className="cal-nav-btn" onClick={() => {
-                    if (calMes === 11) { setCalMes(0); setCalAnio(calAnio + 1); }
-                    else setCalMes(calMes + 1);
-                    setCalDiaSeleccionado(null);
-                    setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
-                  }}>›</button>
+                <div className="cal-view-toggle-bar">
+                  <button
+                    type="button"
+                    className={`cal-toggle-pill ${vistaCalendario === 'dia' ? 'active' : ''}`}
+                    onClick={() => setVistaCalendario('dia')}
+                  >
+                    📆 Google Calendar (Vista Día)
+                  </button>
+                  <button
+                    type="button"
+                    className={`cal-toggle-pill ${vistaCalendario === 'mes' ? 'active' : ''}`}
+                    onClick={() => setVistaCalendario('mes')}
+                  >
+                    🗓 Vista Calendario Mes
+                  </button>
                 </div>
 
-                {/* Días de la semana */}
-                <div className="cal-weekdays">
-                  {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => (
-                    <div key={d} className="cal-weekday">{d}</div>
-                  ))}
-                </div>
+                {vistaCalendario === 'dia' ? (
+                  <>
+                    {renderGoogleCalendar({
+                      fecha: formReserva.fecha,
+                      citas: horasOcupadas,
+                      esAdminMode: false,
+                      onCambiarFecha: (nuevaF) => setFormReserva({ ...formReserva, fecha: nuevaF }),
+                      onSeleccionarHora: (nuevaH) => setFormReserva({ ...formReserva, hora_inicio: nuevaH }),
+                      horaSeleccionada: formReserva.hora_inicio,
+                      duracion: duracionTotal
+                    })}
 
-                {/* Grid de días */}
-                <div className="cal-grid">
-                  {(() => {
-                    const primerDia = new Date(calAnio, calMes, 1).getDay();
-                    const diasEnMes = new Date(calAnio, calMes + 1, 0).getDate();
-                    const hoyStr = new Date().toISOString().split('T')[0];
-                    const celdas = [];
+                    {/* Horarios rápidos sugeridos */}
+                    <div className="cal-slots-quick-select">
+                      <span className="cal-quick-title">⚡ O selecciona un horario frecuente:</span>
+                      <div className="cal-slots-grid">
+                        {HORARIOS_DISPONIBLES.map(h => {
+                          const [hH, hM] = h.valor.split(':').map(Number);
+                          const minIni = hH * 60 + hM;
+                          const minFin = minIni + duracionTotal;
+                          const estaOcupada = horasOcupadas.some(ocupada => {
+                            const [oH1, oM1] = ocupada.hora_inicio.split(':').map(Number);
+                            const [oH2, oM2] = ocupada.hora_fin.split(':').map(Number);
+                            return minIni < (oH2 * 60 + oM2) && minFin > (oH1 * 60 + oM1);
+                          });
+                          const seleccionado = formReserva.hora_inicio === h.valor;
 
-                    // Celdas vacías al inicio
-                    for (let i = 0; i < primerDia; i++) {
-                      celdas.push(<div key={`vacio-${i}`} className="cal-day vacio" />);
-                    }
-
-                    for (let d = 1; d <= diasEnMes; d++) {
-                      const fechaStr = `${calAnio}-${String(calMes + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                      const esPasado = fechaStr < hoyStr;
-                      const esHoy = fechaStr === hoyStr;
-                      const esSeleccionado = fechaStr === formReserva.fecha;
-                      const esDomingo = new Date(calAnio, calMes, d).getDay() === 0; // Cerrado domingos
-
-                      celdas.push(
-                        <button
-                          key={d}
-                          type="button"
-                          disabled={esPasado || esDomingo}
-                          className={`cal-day${esPasado || esDomingo ? ' bloqueado' : ''}${esHoy ? ' hoy' : ''}${esSeleccionado ? ' seleccionado' : ''}`}
-                          onClick={() => {
-                            if (esPasado || esDomingo) return;
-                            setCalDiaSeleccionado(fechaStr);
-                            setFormReserva({ ...formReserva, fecha: fechaStr, hora_inicio: '' });
-                          }}
-                        >
-                          {d}
-                          {esHoy && <span className="cal-hoy-dot" />}
-                        </button>
-                      );
-                    }
-                    return celdas;
-                  })()}
-                </div>
-
-                {/* Slots de horario — aparecen al seleccionar día */}
-                {calDiaSeleccionado && (
-                  <div className="cal-slots">
-                    <p className="cal-slots-title">⏰ Elige tu horario para el {new Date(calDiaSeleccionado + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short' })}:</p>
-                    <div className="cal-slots-grid">
-                      {HORARIOS_DISPONIBLES.map(h => {
-                        const [hH, hM] = h.valor.split(':').map(Number);
-                        const minIni = hH * 60 + hM;
-                        const minFin = minIni + duracionTotal;
-                        const estaOcupada = horasOcupadas.some(ocupada => {
-                          const [oH1, oM1] = ocupada.hora_inicio.split(':').map(Number);
-                          const [oH2, oM2] = ocupada.hora_fin.split(':').map(Number);
-                          return minIni < (oH2 * 60 + oM2) && minFin > (oH1 * 60 + oM1);
-                        });
-                        const seleccionado = formReserva.hora_inicio === h.valor;
-
-                        return (
-                          <button
-                            key={h.valor}
-                            type="button"
-                            disabled={estaOcupada}
-                            className={`cal-slot-btn${estaOcupada ? ' ocupado' : ''}${seleccionado ? ' seleccionado' : ''}`}
-                            onClick={() => !estaOcupada && setFormReserva({ ...formReserva, hora_inicio: h.valor })}
-                          >
-                            {h.etiqueta}
-                            {estaOcupada && <span className="slot-ocupado-label">Ocupado</span>}
-                          </button>
-                        );
-                      })}
+                          return (
+                            <button
+                              key={h.valor}
+                              type="button"
+                              disabled={estaOcupada}
+                              className={`cal-slot-btn${estaOcupada ? ' ocupado' : ''}${seleccionado ? ' seleccionado' : ''}`}
+                              onClick={() => !estaOcupada && setFormReserva({ ...formReserva, hora_inicio: h.valor })}
+                            >
+                              {h.etiqueta}
+                              {estaOcupada && <span className="slot-ocupado-label">Ocupado</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  </>
+                ) : (
+                  <>
+                    {/* Cabecera del mes */}
+                    <div className="cal-header">
+                      <button className="cal-nav-btn" onClick={() => {
+                        if (calMes === 0) { setCalMes(11); setCalAnio(calAnio - 1); }
+                        else setCalMes(calMes - 1);
+                        setCalDiaSeleccionado(null);
+                        setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
+                      }}>‹</button>
+                      <h3 className="cal-mes-label">
+                        {new Date(calAnio, calMes).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+                      </h3>
+                      <button className="cal-nav-btn" onClick={() => {
+                        if (calMes === 11) { setCalMes(0); setCalAnio(calAnio + 1); }
+                        else setCalMes(calMes + 1);
+                        setCalDiaSeleccionado(null);
+                        setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
+                      }}>›</button>
+                    </div>
 
-                {!calDiaSeleccionado && (
-                  <p className="cal-hint">👆 Selecciona un día para ver los horarios disponibles</p>
+                    {/* Días de la semana */}
+                    <div className="cal-weekdays">
+                      {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => (
+                        <div key={d} className="cal-weekday">{d}</div>
+                      ))}
+                    </div>
+
+                    {/* Grid de días */}
+                    <div className="cal-grid">
+                      {(() => {
+                        const primerDia = new Date(calAnio, calMes, 1).getDay();
+                        const diasEnMes = new Date(calAnio, calMes + 1, 0).getDate();
+                        const hoyStr = new Date().toISOString().split('T')[0];
+                        const celdas = [];
+
+                        for (let i = 0; i < primerDia; i++) {
+                          celdas.push(<div key={`vacio-${i}`} className="cal-day vacio" />);
+                        }
+
+                        for (let d = 1; d <= diasEnMes; d++) {
+                          const fechaStr = `${calAnio}-${String(calMes + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                          const esPasado = fechaStr < hoyStr;
+                          const esHoy = fechaStr === hoyStr;
+                          const esSeleccionado = fechaStr === formReserva.fecha;
+                          const esDomingo = new Date(calAnio, calMes, d).getDay() === 0;
+
+                          celdas.push(
+                            <button
+                              key={d}
+                              type="button"
+                              disabled={esPasado || esDomingo}
+                              className={`cal-day${esPasado || esDomingo ? ' bloqueado' : ''}${esHoy ? ' hoy' : ''}${esSeleccionado ? ' seleccionado' : ''}`}
+                              onClick={() => {
+                                if (esPasado || esDomingo) return;
+                                setCalDiaSeleccionado(fechaStr);
+                                setFormReserva({ ...formReserva, fecha: fechaStr, hora_inicio: '10:00:00' });
+                              }}
+                            >
+                              {d}
+                              {esHoy && <span className="cal-hoy-dot" />}
+                            </button>
+                          );
+                        }
+                        return celdas;
+                      })()}
+                    </div>
+
+                    {calDiaSeleccionado && (
+                      <div className="cal-slots">
+                        <p className="cal-slots-title">⏰ Elige tu horario para el {new Date(calDiaSeleccionado + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short' })}:</p>
+                        <div className="cal-slots-grid">
+                          {HORARIOS_DISPONIBLES.map(h => {
+                            const [hH, hM] = h.valor.split(':').map(Number);
+                            const minIni = hH * 60 + hM;
+                            const minFin = minIni + duracionTotal;
+                            const estaOcupada = horasOcupadas.some(ocupada => {
+                              const [oH1, oM1] = ocupada.hora_inicio.split(':').map(Number);
+                              const [oH2, oM2] = ocupada.hora_fin.split(':').map(Number);
+                              return minIni < (oH2 * 60 + oM2) && minFin > (oH1 * 60 + oM1);
+                            });
+                            const seleccionado = formReserva.hora_inicio === h.valor;
+
+                            return (
+                              <button
+                                key={h.valor}
+                                type="button"
+                                disabled={estaOcupada}
+                                className={`cal-slot-btn${estaOcupada ? ' ocupado' : ''}${seleccionado ? ' seleccionado' : ''}`}
+                                onClick={() => !estaOcupada && setFormReserva({ ...formReserva, hora_inicio: h.valor })}
+                              >
+                                {h.etiqueta}
+                                {estaOcupada && <span className="slot-ocupado-label">Ocupado</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

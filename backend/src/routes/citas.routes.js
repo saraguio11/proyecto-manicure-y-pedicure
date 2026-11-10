@@ -14,17 +14,40 @@ router.get('/disponibilidad', async (req, res) => {
       return res.status(400).json({ error: 'La fecha es obligatoria' });
     }
 
-    const [citasOcupadas] = await pool.execute(
-      `SELECT hora_inicio, hora_fin 
-       FROM citas 
-       WHERE fecha = ? AND estado_id != 3`,
-      [fecha]
-    );
+    let citasOcupadas;
+    try {
+      [citasOcupadas] = await pool.execute(
+        `SELECT c.id, c.hora_inicio, c.hora_fin, c.usuario_id, c.estado_id, c.precio, c.observacion,
+                s.nombre AS servicio_nombre, s.duracion_min,
+                u.nombre_completo AS cliente_nombre,
+                COALESCE(m.nombre, 'Manicurista') AS manicurista_nombre
+         FROM citas c
+         JOIN servicios s ON c.servicio_id = s.id
+         JOIN usuarios u ON c.usuario_id = u.id
+         LEFT JOIN manicuristas m ON c.manicurista_id = m.id
+         WHERE c.fecha = ? AND c.estado_id != 3
+         ORDER BY c.hora_inicio ASC`,
+        [fecha]
+      );
+    } catch (joinErr) {
+      [citasOcupadas] = await pool.execute(
+        `SELECT c.id, c.hora_inicio, c.hora_fin, c.usuario_id, c.estado_id, c.precio, c.observacion,
+                s.nombre AS servicio_nombre, s.duracion_min,
+                u.nombre_completo AS cliente_nombre,
+                'Manicurista' AS manicurista_nombre
+         FROM citas c
+         JOIN servicios s ON c.servicio_id = s.id
+         JOIN usuarios u ON c.usuario_id = u.id
+         WHERE c.fecha = ? AND c.estado_id != 3
+         ORDER BY c.hora_inicio ASC`,
+        [fecha]
+      );
+    }
 
     res.json(citasOcupadas);
   } catch (error) {
     console.error('Error al consultar disponibilidad:', error);
-    res.status(500).json({ error: 'Error al consultar disponibilidad de horarios' });
+    res.status(500).json({ error: error.message || 'Error al consultar disponibilidad de horarios' });
   }
 });
 
@@ -182,10 +205,18 @@ router.post('/', verificarToken, async (req, res) => {
 
     // 2. Consultar todos los servicios seleccionados (ej: Uñas acrílicas + Pedicure)
     const placeholders = listaIds.map(() => '?').join(',');
-    const [serviciosEncontrados] = await pool.execute(
-      `SELECT id, nombre, duracion_min, precio FROM servicios WHERE id IN (${placeholders}) AND activo = 1`,
-      listaIds
-    );
+    let serviciosEncontrados;
+    try {
+      [serviciosEncontrados] = await pool.execute(
+        `SELECT id, nombre, duracion_min, precio FROM servicios WHERE id IN (${placeholders}) AND (activo = 1 OR activo IS NULL)`,
+        listaIds
+      );
+    } catch (colActivoErr) {
+      [serviciosEncontrados] = await pool.execute(
+        `SELECT id, nombre, duracion_min, precio FROM servicios WHERE id IN (${placeholders})`,
+        listaIds
+      );
+    }
 
     if (serviciosEncontrados.length === 0) {
       return res.status(404).json({ error: 'Ninguno de los servicios seleccionados está disponible' });
