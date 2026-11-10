@@ -1786,14 +1786,51 @@
   box-shadow: 0 0 8px rgba(234, 67, 53, 0.9);
 }
 
+/* Barra de leyenda explicativa Google Calendar */
+.gcal-legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 1.25rem;
+  background: #18191c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: #c9d1d9;
+}
+
+.gcal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+.gcal-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.gcal-legend-dot.blue { background: #1a73e8; box-shadow: 0 0 6px rgba(26, 115, 232, 0.6); }
+.gcal-legend-dot.purple { background: #d946ef; box-shadow: 0 0 6px rgba(217, 70, 239, 0.6); }
+.gcal-legend-dot.red { background: #ea4335; box-shadow: 0 0 6px rgba(234, 67, 53, 0.6); }
+
+.gcal-legend-tip {
+  margin-left: auto;
+  color: #d8b4fe;
+  font-weight: 600;
+  font-size: 0.74rem;
+}
+
 /* Appointment Event Block (Google Calendar Blue Card) */
 .gcal-event-block {
   position: absolute;
-  background: #4285f4;
+  background: #1a73e8; /* Google Blue */
   color: #ffffff;
   border-radius: 6px;
-  padding: 6px 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  padding: 4px 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   cursor: pointer;
   z-index: 10;
@@ -1801,70 +1838,93 @@
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
+  border-left: 3px solid rgba(255, 255, 255, 0.85);
   text-align: left;
 }
 .gcal-event-block:hover {
   transform: scale(1.008);
-  box-shadow: 0 4px 14px rgba(66, 133, 244, 0.5);
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.5);
   filter: brightness(1.05);
   z-index: 15;
 }
 
 .gcal-event-block.estado-1 {
-  background: #3b82f6; /* Pendiente - Azul */
+  background: #2563eb; /* Pendiente */
+  border-left-color: #93c5fd;
 }
 .gcal-event-block.estado-2 {
-  background: #1a73e8; /* Confirmada - Google Blue clásico */
+  background: #1a73e8; /* Confirmada */
+  border-left-color: #ffffff;
 }
 .gcal-event-block.estado-4 {
-  background: #10b981; /* Atendida - Verde */
+  background: #059669; /* Atendida */
+  border-left-color: #a7f3d0;
+}
+
+.gcal-event-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  line-height: 1.25;
 }
 
 .gcal-event-title {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.2;
-  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #ffffff;
 }
 
-.gcal-event-time {
-  font-size: 0.74rem;
-  font-weight: 500;
-  opacity: 0.95;
+.gcal-event-time-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: #e2e8f0;
+}
+
+.gcal-event-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 2px;
+  font-size: 0.73rem;
   line-height: 1.2;
+  opacity: 0.95;
 }
 
 .gcal-event-client {
-  font-size: 0.78rem;
   font-weight: 600;
-  margin-top: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.95;
+  color: #f1f5f9;
 }
 
 .gcal-event-staff {
-  font-size: 0.72rem;
-  font-style: italic;
-  opacity: 0.9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  opacity: 0.9;
+  font-size: 0.71rem;
 }
 
 /* Live Booking Block Preview */
 .gcal-booking-preview {
   position: absolute;
-  background: linear-gradient(135deg, rgba(147, 3, 197, 0.88), rgba(217, 70, 239, 0.88));
-  border: 2px dashed #f0abfc;
+  background: linear-gradient(135deg, rgba(147, 3, 197, 0.92), rgba(217, 70, 239, 0.92));
+  border: 2px dashed #f5d0fe;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   color: #ffffff;
   box-shadow: 0 0 18px rgba(168, 85, 247, 0.6);
   z-index: 12;
@@ -1873,7 +1933,25 @@
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
+  border-left: 4px solid #fdf4ff;
+}
+
+.gcal-preview-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 2px;
+}
+
+.gcal-preview-time-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fdf4ff;
 }
 
 @keyframes gcalPulse {
@@ -1888,36 +1966,16 @@
   letter-spacing: 0.05em;
   color: #fdf4ff;
   text-transform: uppercase;
-  margin-bottom: 2px;
 }
 
 .gcal-preview-title {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 700;
   line-height: 1.2;
   color: #ffffff;
-}
-
-.gcal-preview-meta {
-  font-size: 0.76rem;
-  font-weight: 500;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.gcal-preview-dur {
-  background: rgba(0, 0, 0, 0.25);
-  padding: 0.1rem 0.45rem;
-  border-radius: 12px;
-  font-weight: 700;
-}
-
-.gcal-preview-price {
-  font-weight: 800;
-  color: #fef08a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Switcher pills for calendar views */
@@ -1989,4 +2047,137 @@
 
 .dash-gcal-wrapper {
   margin-top: 0.5rem;
+}
+
+/* ==========================================================================
+   PASO A PASO INTUITIVO DE RESERVA (CLEAN LUXURY STEPS)
+   ========================================================================== */
+.reserva-header-badge {
+  margin-bottom: 1.25rem;
+}
+.reserva-header-badge h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  margin: 0 0 0.35rem 0;
+  background: linear-gradient(135deg, #ffffff, #f0abfc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.reserva-subtitle {
+  font-size: 0.88rem;
+  color: #c084fc;
+  margin: 0;
+}
+
+.reserva-step-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(147, 3, 197, 0.22);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+.reserva-step-card:hover {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.reserva-step-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.reserva-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9303C5, #ec4899);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(147, 3, 197, 0.4);
+}
+
+.reserva-step-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.reserva-step-hint {
+  font-size: 0.75rem;
+  color: #c084fc;
+  margin: 2px 0 0 0;
+}
+
+.reserva-mini-totals {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reserva-total-chip {
+  background: rgba(147, 3, 197, 0.18);
+  border: 1px solid rgba(147, 3, 197, 0.35);
+  color: #e9d5ff;
+  border-radius: 20px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+}
+.reserva-total-chip.price {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.reserva-ticket-box {
+  background: rgba(15, 2, 28, 0.8);
+  border: 1px solid rgba(147, 3, 197, 0.3);
+  border-left: 3px solid #d946ef;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.ticket-label {
+  color: #c084fc;
+  font-weight: 600;
+}
+
+.ticket-val {
+  font-weight: 700;
+  color: #f8fafc;
+  text-transform: capitalize;
+}
+
+.ticket-val.highlight {
+  color: #f0abfc;
+}
+
+.reserva-ticket-empty {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  text-align: center;
 }

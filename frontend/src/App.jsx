@@ -378,10 +378,15 @@ function App() {
 
           <div className="gcal-header-right">
             <span className="gcal-timezone-tag">GMT-5</span>
-            {!esAdminMode && (
-              <span className="gcal-hint-badge">💡 Toca cualquier espacio libre para fijar tu horario</span>
-            )}
           </div>
+        </div>
+
+        {/* Barra de leyenda explicativa e intuitiva */}
+        <div className="gcal-legend-bar">
+          <span className="gcal-legend-item"><span className="gcal-legend-dot blue" /> Cita Ocupada</span>
+          {!esAdminMode && <span className="gcal-legend-item"><span className="gcal-legend-dot purple" /> Tu Selección</span>}
+          {redLineVisible && <span className="gcal-legend-item"><span className="gcal-legend-dot red" /> Hora Actual</span>}
+          {!esAdminMode && <span className="gcal-legend-tip">💡 Toca cualquier franja libre para agendar a esa hora</span>}
         </div>
 
         {/* Cuerpo del calendario: Timeline de 8 AM a 10 PM */}
@@ -408,7 +413,7 @@ function App() {
                       onSeleccionarHora(h.valor);
                     }
                   }}
-                  title={!esAdminMode && fecha >= fechaHoy ? `Click para reservar a las ${h.etiqueta}` : ''}
+                  title={!esAdminMode && fecha >= fechaHoy ? `Haz clic para agendar a las ${h.etiqueta}` : ''}
                 >
                   <div className="gcal-half-hour-line" />
                 </div>
@@ -439,20 +444,18 @@ function App() {
                     onClick={() => {
                       if (esAdminMode) setCitaDetalleModal(c);
                     }}
-                    title={`Cita de ${c.cliente_nombre || 'Clienta'}: ${c.servicio_nombre} (${c.hora_inicio?.substring(0,5)} - ${c.hora_fin?.substring(0,5)})`}
+                    title={`Cita: ${c.servicio_nombre} (${formatearHora12(c.hora_inicio)} - ${formatearHora12(c.hora_fin)}) · Clienta: ${c.cliente_nombre || 'Clienta'} · Manicurista: ${c.manicurista_nombre || 'Sin asignar'}`}
                   >
-                    <div className="gcal-event-title">
-                      💅 {c.servicio_nombre || 'Cita de salón'}
+                    <div className="gcal-event-header-row">
+                      <span className="gcal-event-title">💅 {c.servicio_nombre || 'Cita de salón'}</span>
+                      <span className="gcal-event-time-pill">{formatearHora12(c.hora_inicio)} – {formatearHora12(c.hora_fin)}</span>
                     </div>
-                    <div className="gcal-event-time">
-                      🕒 {formatearHora12(c.hora_inicio)} – {formatearHora12(c.hora_fin)}
-                    </div>
-                    <div className="gcal-event-client">
-                      👤 {c.cliente_nombre || 'Clienta'}
-                    </div>
-                    {c.manicurista_nombre && (
-                      <div className="gcal-event-staff">
-                        ✨ {c.manicurista_nombre}
+                    {c.heightPx >= 46 && (
+                      <div className="gcal-event-meta-row">
+                        <span className="gcal-event-client">👤 {c.cliente_nombre || 'Clienta'}</span>
+                        {c.manicurista_nombre && (
+                          <span className="gcal-event-staff">✨ {c.manicurista_nombre}</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -478,14 +481,14 @@ function App() {
                       left: '6px'
                     }}
                   >
-                    <div className="gcal-preview-badge">✨ TU RESERVA SELECCIONADA</div>
+                    <div className="gcal-preview-header-row">
+                      <span className="gcal-preview-badge">✨ TU SELECCIÓN</span>
+                      <span className="gcal-preview-time-pill">
+                        🕒 {formatearHora12(horaSeleccionada)} – {formatearHora12(hFin)} ({duracion}m)
+                      </span>
+                    </div>
                     <div className="gcal-preview-title">
                       {serviciosSeleccionados.map(s => s.nombre).join(' + ')}
-                    </div>
-                    <div className="gcal-preview-meta">
-                      🕒 {formatearHora12(horaSeleccionada)} → {formatearHora12(hFin)}
-                      <span className="gcal-preview-dur">⏱ {duracion} min</span>
-                      <span className="gcal-preview-price">💵 ${precioTotal.toLocaleString()} COP</span>
                     </div>
                   </div>
                 );
@@ -1879,17 +1882,24 @@ function App() {
           <section id="reservar" className="section reservar-section">
             <div className="reservar-layout">
 
-              {/* Panel izquierdo — resumen de servicios elegidos */}
+              {/* Panel izquierdo — Paso a paso intuitivo de reserva */}
               <div className="reservar-panel-left">
-                <h2>Agenda Tu Espacio</h2>
+                <div className="reserva-header-badge">
+                  <h2>Agenda Tu Cita</h2>
+                  <p className="reserva-subtitle">Sigue estos sencillos pasos para asegurar tu espacio</p>
+                </div>
 
-                {/* Selector interactivo de tratamiento(s) para la reserva */}
-                <div className="reserva-selector-tratamientos">
-                  <label className="reserva-label-titulo">💅 Tratamiento(s) a reservar:</label>
+                {/* PASO 1: Servicio(s) */}
+                <div className="reserva-step-card">
+                  <div className="reserva-step-header">
+                    <span className="reserva-step-num">1</span>
+                    <div>
+                      <h4 className="reserva-step-title">Elige tu tratamiento</h4>
+                      <p className="reserva-step-hint">Servicio principal o combo de hasta 2 servicios</p>
+                    </div>
+                  </div>
 
-                  {/* Servicio 1 */}
                   <div className="reserva-combo-row">
-                    <span className="reserva-row-badge">1</span>
                     <select
                       className="reserva-dropdown"
                       value={serviciosSeleccionados[0]?.id || ''}
@@ -1911,8 +1921,7 @@ function App() {
                   </div>
 
                   {/* Servicio 2 (Opcional - Combo) */}
-                  <div className="reserva-combo-row">
-                    <span className="reserva-row-badge">2</span>
+                  <div className="reserva-combo-row" style={{ marginTop: '0.45rem' }}>
                     <select
                       className="reserva-dropdown"
                       value={serviciosSeleccionados[1]?.id || ''}
@@ -1939,46 +1948,25 @@ function App() {
                         ))}
                     </select>
                   </div>
-                </div>
 
-                <div className="combo-summary-box">
-                  <div className="combo-title">
-                    <span>✨ Tu Sesión ({serviciosSeleccionados.length} {serviciosSeleccionados.length === 1 ? 'servicio' : 'servicios'}):</span>
-                  </div>
-                  <div className="combo-chips">
-                    {serviciosSeleccionados.map(s => (
-                      <span key={s.id} className="service-chip">
-                        {s.nombre} (⏱ {s.duracion_min}m)
-                      </span>
-                    ))}
-                  </div>
-                  <div className="combo-totals">
-                    <span>⏱ Duración Total: <strong>{duracionTotal} min</strong></span>
-                    <span>💵 Inversión: <strong>${precioTotal.toLocaleString()} COP</strong></span>
+                  {/* Chips de duración e inversión */}
+                  <div className="reserva-mini-totals">
+                    <span className="reserva-total-chip">⏱ Duración: <strong>{duracionTotal} min</strong></span>
+                    <span className="reserva-total-chip price">💵 Inversión: <strong>${precioTotal.toLocaleString()} COP</strong></span>
                   </div>
                 </div>
 
-                {!usuario && (
-                  <p className="login-tip">
-                    ✦ Para reservar, inicia sesión o regístrate en un clic.
-                  </p>
-                )}
-
-                {/* Hora seleccionada resumen */}
-                {formReserva.fecha && formReserva.hora_inicio && (
-                  <div className="reserva-resumen-box">
-                    <p>📅 <strong>{new Date(formReserva.fecha + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</strong></p>
-                    <p>
-                      🕒 <strong>{formReserva.hora_inicio.substring(0,5)}</strong> → <strong>{calcularHoraFin(formReserva.hora_inicio, duracionTotal)}</strong>
-                      <span className="reserva-dur-pill">⏱ {duracionTotal} min</span>
-                    </p>
+                {/* PASO 2: Manicurista */}
+                <div className="reserva-step-card">
+                  <div className="reserva-step-header">
+                    <span className="reserva-step-num">2</span>
+                    <div>
+                      <h4 className="reserva-step-title">Manicurista</h4>
+                      <p className="reserva-step-hint">¿Quién deseas que te atienda?</p>
+                    </div>
                   </div>
-                )}
-
-                {/* Manicurista de preferencia */}
-                <div className="form-group">
-                  <label>💅 Manicurista de tu preferencia</label>
                   <select
+                    className="reserva-dropdown"
                     value={formReserva.manicurista_id}
                     onChange={(e) => setFormReserva({ ...formReserva, manicurista_id: e.target.value })}
                   >
@@ -1991,25 +1979,65 @@ function App() {
                   </select>
                 </div>
 
-                {/* Observaciones */}
-                <div className="form-group">
-                  <label>Notas / diseño personalizado (Opcional)</label>
-                  <textarea
-                    rows="2"
-                    placeholder="Colores, técnicas o referencias que tengas en mente..."
-                    value={formReserva.observacion}
-                    onChange={(e) => setFormReserva({ ...formReserva, observacion: e.target.value })}
-                  />
+                {/* PASO 3: Resumen de Fecha y Hora del Calendario */}
+                <div className="reserva-step-card">
+                  <div className="reserva-step-header">
+                    <span className="reserva-step-num">3</span>
+                    <div>
+                      <h4 className="reserva-step-title">Fecha y Horario Elegido</h4>
+                      <p className="reserva-step-hint">Seleccionado directamente en el calendario 👉</p>
+                    </div>
+                  </div>
+
+                  {formReserva.fecha && formReserva.hora_inicio ? (
+                    <div className="reserva-ticket-box">
+                      <div className="ticket-row">
+                        <span className="ticket-label">📅 Fecha:</span>
+                        <span className="ticket-val">
+                          {new Date(formReserva.fecha + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long' })}
+                        </span>
+                      </div>
+                      <div className="ticket-row">
+                        <span className="ticket-label">🕒 Horario:</span>
+                        <span className="ticket-val highlight">
+                          {formatearHora12(formReserva.hora_inicio)} → {formatearHora12(calcularHoraFin(formReserva.hora_inicio, duracionTotal))}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="reserva-ticket-empty">
+                      👈 Toca una franja horaria en el calendario para seleccionar tu hora
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  className="submit-btn"
-                  disabled={reservaCargando || !formReserva.fecha || !formReserva.hora_inicio}
-                  onClick={handleReservar}
-                >
-                  {reservaCargando ? 'Procesando...' : !formReserva.fecha ? 'Selecciona una fecha →' : !formReserva.hora_inicio ? 'Selecciona una hora →' : usuario ? `Confirmar Cita ($${precioTotal.toLocaleString()} COP) ✦` : 'Iniciar Sesión y Reservar ✦'}
-                </button>
+                {/* PASO 4: Notas y Confirmación */}
+                <div className="reserva-step-card">
+                  <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 600 }}>Notas o referencias de diseño (Opcional)</label>
+                    <textarea
+                      rows="2"
+                      placeholder="Colores, técnicas o referencias que tengas en mente..."
+                      value={formReserva.observacion}
+                      onChange={(e) => setFormReserva({ ...formReserva, observacion: e.target.value })}
+                    />
+                  </div>
+
+                  {!usuario && (
+                    <p className="login-tip" style={{ marginBottom: '0.75rem' }}>
+                      ✦ Inicia sesión o regístrate en 1 clic para confirmar tu cita.
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    className="submit-btn"
+                    disabled={reservaCargando || !formReserva.fecha || !formReserva.hora_inicio}
+                    onClick={handleReservar}
+                  >
+                    {reservaCargando ? 'Procesando...' : !formReserva.fecha ? 'Selecciona una fecha →' : !formReserva.hora_inicio ? 'Selecciona una hora en el calendario →' : usuario ? `Confirmar Cita ($${precioTotal.toLocaleString()} COP) ✦` : 'Iniciar Sesión y Reservar ✦'}
+                  </button>
+                </div>
               </div>
 
               {/* Panel derecho — CALENDARIO interactivo tipo Google */}
