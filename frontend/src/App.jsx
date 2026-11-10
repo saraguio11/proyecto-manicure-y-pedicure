@@ -321,8 +321,14 @@ function App() {
             <button
               type="button"
               className="gcal-nav-btn"
-              onClick={() => onCambiarFecha(sumarDias(fecha, -1))}
-              title="Día anterior"
+              disabled={!esAdminMode && fecha <= fechaHoy}
+              onClick={() => {
+                const ant = sumarDias(fecha, -1);
+                if (esAdminMode || ant >= fechaHoy) {
+                  onCambiarFecha(ant);
+                }
+              }}
+              title={!esAdminMode && fecha <= fechaHoy ? "No puedes reservar en fechas pasadas" : "Día anterior"}
             >
               ‹
             </button>
@@ -346,7 +352,16 @@ function App() {
               type="date"
               className="gcal-date-picker-input"
               value={fecha}
-              onChange={(e) => e.target.value && onCambiarFecha(e.target.value)}
+              min={!esAdminMode ? fechaHoy : undefined}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) return;
+                if (!esAdminMode && val < fechaHoy) {
+                  mostrarAlerta('No puedes agendar citas en fechas anteriores a hoy', 'error');
+                  return;
+                }
+                onCambiarFecha(val);
+              }}
               title="Elegir fecha"
             />
           </div>
@@ -2063,12 +2078,18 @@ function App() {
                   <>
                     {/* Cabecera del mes */}
                     <div className="cal-header">
-                      <button className="cal-nav-btn" onClick={() => {
-                        if (calMes === 0) { setCalMes(11); setCalAnio(calAnio - 1); }
-                        else setCalMes(calMes - 1);
-                        setCalDiaSeleccionado(null);
-                        setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
-                      }}>‹</button>
+                      <button
+                        className="cal-nav-btn"
+                        disabled={calAnio < hoy.getFullYear() || (calAnio === hoy.getFullYear() && calMes <= hoy.getMonth())}
+                        onClick={() => {
+                          if (calAnio < hoy.getFullYear() || (calAnio === hoy.getFullYear() && calMes <= hoy.getMonth())) return;
+                          if (calMes === 0) { setCalMes(11); setCalAnio(calAnio - 1); }
+                          else setCalMes(calMes - 1);
+                          setCalDiaSeleccionado(null);
+                          setFormReserva({ ...formReserva, fecha: '', hora_inicio: '10:00:00' });
+                        }}
+                        title={calAnio < hoy.getFullYear() || (calAnio === hoy.getFullYear() && calMes <= hoy.getMonth()) ? "No puedes ver meses pasados" : "Mes anterior"}
+                      >‹</button>
                       <h3 className="cal-mes-label">
                         {new Date(calAnio, calMes).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
                       </h3>

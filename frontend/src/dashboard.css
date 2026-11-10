@@ -1584,6 +1584,13 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+.gcal-nav-btn:disabled,
+.cal-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .gcal-today-btn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.18);
