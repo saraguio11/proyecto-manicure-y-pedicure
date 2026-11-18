@@ -90,11 +90,72 @@ const calcularPosicionesEventos = (eventos) => {
   });
 };
 
+const DISENOS_LOOKBOOK = [
+  {
+    id: 1,
+    titulo: 'Baby Boomer Luxury',
+    categoria: 'Acrílico & Polygel',
+    servicio_sugerido_id: 4,
+    descripcion: 'Difuminado ombré francés clásico con acrílico rosa cover y punta blanca leche, acabado ultra brillante.',
+    imagen: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=600&auto=format&fit=crop&q=80',
+    popular: true
+  },
+  {
+    id: 2,
+    titulo: 'Efecto Glaseado & Aurora',
+    categoria: 'Semipermanente',
+    servicio_sugerido_id: 6,
+    descripcion: 'Inspiración Hailey Bieber. Polvo de sirena aperlado sobre base nude translúcida con brillo perlado.',
+    imagen: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&auto=format&fit=crop&q=80',
+    popular: true
+  },
+  {
+    id: 3,
+    titulo: 'Francesa Micro en Gel Pastel',
+    categoria: 'Nail Art',
+    servicio_sugerido_id: 2,
+    descripcion: 'Líneas micro francesas minimalistas en tonos lila, matcha y mantequilla. Elegancia y tendencia.',
+    imagen: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=600&auto=format&fit=crop&q=80',
+    popular: false
+  },
+  {
+    id: 4,
+    titulo: 'Polygel Almendrado con Pan de Oro',
+    categoria: 'Extensiones',
+    servicio_sugerido_id: 4,
+    descripcion: 'Estructura almendrada esculpida con delicados detalles en pan de oro de 24k encapsulado.',
+    imagen: 'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=600&auto=format&fit=crop&q=80',
+    popular: true
+  },
+  {
+    id: 5,
+    titulo: 'Dipping Ultra Resistente con Glitter',
+    categoria: 'Dipping',
+    servicio_sugerido_id: 7,
+    descripcion: 'Técnica de inmersión en polvo orgánico sin lámpara, acabado diamantado de alta durabilidad.',
+    imagen: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&auto=format&fit=crop&q=80',
+    popular: false
+  },
+  {
+    id: 6,
+    titulo: 'Nivelación Rubber Base Nude Natural',
+    categoria: 'Cuidado Natural',
+    servicio_sugerido_id: 8,
+    descripcion: 'Corrección del ápice y refuerzo de uña natural con curvatura suave y tono nude traslúcido.',
+    imagen: 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=600&auto=format&fit=crop&q=80',
+    popular: true
+  }
+];
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('token_spa') || '');
   const [usuario, setUsuario] = useState(() => {
-    const sesion = localStorage.getItem('sesion_spa');
-    return sesion ? JSON.parse(sesion) : null;
+    try {
+      const sesion = localStorage.getItem('sesion_spa');
+      return sesion ? JSON.parse(sesion) : null;
+    } catch {
+      return null;
+    }
   });
 
   const esAdmin = usuario?.rol === 'Administradora' || usuario?.rol_id === 2;
@@ -144,12 +205,20 @@ function App() {
   const [serviciosSeleccionados, setServiciosSeleccionados] = useState([SERVICIOS_DEFAULT[0]]);
   const [cargandoServicios, setCargandoServicios] = useState(false);
 
-  const fechaHoy = new Date().toISOString().split('T')[0];
+  // Fecha local precisa (evita adelantos de zona horaria UTC en Colombia)
+  const fechaHoy = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dia}`;
+  })();
   const [formReserva, setFormReserva] = useState({
     fecha: fechaHoy,
     hora_inicio: '10:00:00',
     observacion: '',
-    manicurista_id: ''
+    manicurista_id: '',
+    comprobante_pago: ''
   });
   const [reservaCargando, setReservaCargando] = useState(false);
   const [horasOcupadas, setHorasOcupadas] = useState([]);
@@ -158,15 +227,133 @@ function App() {
   const [fechaAdminGcal, setFechaAdminGcal] = useState(fechaHoy);
   const [citasGcalAdmin, setCitasGcalAdmin] = useState([]);
   const [citaDetalleModal, setCitaDetalleModal] = useState(null);
+  const [filtroManicuristaGcal, setFiltroManicuristaGcal] = useState('');
+  const [reprogramarModal, setReprogramarModal] = useState(null);
 
-  const cargarCitasGcalAdmin = (f) => {
+  const cargarCitasGcalAdmin = (f, mId) => {
     const targetFecha = f || fechaAdminGcal;
-    fetch(`${API_BASE}/citas/disponibilidad?fecha=${targetFecha}`)
+    const targetMId = mId !== undefined ? mId : filtroManicuristaGcal;
+    let url = `${API_BASE}/citas/disponibilidad?fecha=${targetFecha}`;
+    if (targetMId) url += `&manicurista_id=${targetMId}`;
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setCitasGcalAdmin(data);
       })
       .catch(err => console.error(err));
+  };
+
+  const seleccionarDisenoLookbook = (diseno) => {
+    const svc = servicios.find(s => s.id === diseno.servicio_sugerido_id) || servicios[0];
+    if (svc) {
+      setServiciosSeleccionados([svc]);
+    }
+    setFormReserva(prev => ({
+      ...prev,
+      observacion: `✨ Diseño Lookbook: ${diseno.titulo} (${diseno.categoria})`
+    }));
+    setPagina('reservar');
+    mostrarAlerta(`✨ ¡Diseño "${diseno.titulo}" cargado con éxito! Elige tu fecha y hora.`, 'success');
+  };
+
+  const generarICS = (cita) => {
+    const fechaLimpia = (cita.fecha || '').substring(0, 10).replace(/-/g, '');
+    const [hI, mI] = (cita.hora_inicio || '08:00').split(':').map(Number);
+    const [hF, mF] = (cita.hora_fin || '09:00').split(':').map(Number);
+    
+    const dtStart = `${fechaLimpia}T${String(hI).padStart(2, '0')}${String(mI).padStart(2, '0')}00`;
+    const dtEnd = `${fechaLimpia}T${String(hF).padStart(2, '0')}${String(mF).padStart(2, '0')}00`;
+    
+    const summary = `💅 Glam Nails: ${cita.servicio_nombre || 'Cita de Manicure'}`;
+    const description = `Cita con ${cita.manicurista_nombre || 'Profesional'} en Glam Nails Studio & Spa. Inversión: $${Number(cita.precio).toLocaleString()} COP.`;
+    const location = `Glam Nails Studio & Spa`;
+
+    const icsData = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Glam Nails Studio//Sistema de Citas//ES',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:cita-${cita.id}-${Date.now()}@glamnails.com`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
+      `SUMMARY:${summary}`,
+      `DESCRIPTION:${description}`,
+      `LOCATION:${location}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Cita_GlamNails_${cita.fecha}_${cita.id}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    mostrarAlerta('📅 Calendario (.ics) descargado. Ábrelo para sincronizar tu agenda.', 'success');
+  };
+
+  const abrirEnGoogleCalendarWeb = (cita) => {
+    const fechaLimpia = (cita.fecha || '').substring(0, 10).replace(/-/g, '');
+    const [hI, mI] = (cita.hora_inicio || '08:00').split(':').map(Number);
+    const [hF, mF] = (cita.hora_fin || '09:00').split(':').map(Number);
+    const dates = `${fechaLimpia}T${String(hI).padStart(2, '0')}${String(mI).padStart(2, '0')}00/${fechaLimpia}T${String(hF).padStart(2, '0')}${String(mF).padStart(2, '0')}00`;
+    const text = encodeURIComponent(`💅 Glam Nails: ${cita.servicio_nombre}`);
+    const details = encodeURIComponent(`Cita con ${cita.manicurista_nombre || 'Profesional'} en Glam Nails Studio. Inversión: $${Number(cita.precio).toLocaleString()} COP.`);
+    const location = encodeURIComponent('Glam Nails Studio & Spa');
+    window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&location=${location}`, '_blank');
+  };
+
+  const cancelarCitaCliente = async (citaId) => {
+    if (!window.confirm('¿Segura que deseas cancelar esta cita? Tu horario se liberará en el calendario.')) return;
+    try {
+      const res = await fetch(`${API_BASE}/citas/${citaId}/cancelar-cliente`, {
+        method: 'PATCH',
+        headers: authHeaders()
+      });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta(data.mensaje || 'Cita cancelada con éxito', 'success');
+        cargarMisCitas();
+      } else {
+        mostrarAlerta(data.error || 'Error al cancelar la cita', 'error');
+      }
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    }
+  };
+
+  const ejecutarReprogramar = async (e) => {
+    e.preventDefault();
+    if (!reprogramarModal?.id || !reprogramarModal?.fecha || !reprogramarModal?.hora_inicio) {
+      return mostrarAlerta('Selecciona nueva fecha y hora', 'error');
+    }
+    try {
+      const res = await fetch(`${API_BASE}/citas/${reprogramarModal.id}/reprogramar`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          fecha: reprogramarModal.fecha,
+          hora_inicio: reprogramarModal.hora_inicio
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta('✨ ¡Cita reprogramada con éxito!', 'success');
+        setReprogramarModal(null);
+        cargarMisCitas();
+      } else {
+        mostrarAlerta(data.error || 'No fue posible reprogramar', 'error');
+      }
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    }
   };
 
   const HORARIOS_DISPONIBLES = [
@@ -279,13 +466,17 @@ function App() {
       setHorasOcupadas([]);
       return;
     }
-    fetch(`${API_BASE}/citas/disponibilidad?fecha=${formReserva.fecha}`)
+    let url = `${API_BASE}/citas/disponibilidad?fecha=${formReserva.fecha}`;
+    if (formReserva.manicurista_id) {
+      url += `&manicurista_id=${formReserva.manicurista_id}`;
+    }
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setHorasOcupadas(data);
       })
       .catch(err => console.error(err));
-  }, [formReserva.fecha]);
+  }, [formReserva.fecha, formReserva.manicurista_id]);
 
   useEffect(() => {
     if (esAdmin && dashSeccion === 'citas' && vistaCitasAdmin === 'calendario') {
@@ -300,7 +491,9 @@ function App() {
     onCambiarFecha,
     onSeleccionarHora,
     horaSeleccionada = '',
-    duracion = 60
+    duracion = 60,
+    manicuristaSeleccionada = '',
+    onCambiarManicurista = null
   }) => {
     const dObj = new Date(fecha + 'T12:00:00');
     const diaSemana = DIAS_SEMANA_CORTO[dObj.getDay()] || 'LUN';
@@ -381,6 +574,28 @@ function App() {
           </div>
         </div>
 
+        {/* Barra de Filtro por Manicurista */}
+        <div className="gcal-filter-bar">
+          <span className="gcal-filter-label">Agenda:</span>
+          <button
+            type="button"
+            className={`gcal-filter-chip ${!manicuristaSeleccionada ? 'active' : ''}`}
+            onClick={() => onCambiarManicurista && onCambiarManicurista('')}
+          >
+            💅 Todas
+          </button>
+          {manicuristas.filter(m => m.activo !== 0).map(m => (
+            <button
+              key={m.id}
+              type="button"
+              className={`gcal-filter-chip ${String(manicuristaSeleccionada) === String(m.id) ? 'active' : ''}`}
+              onClick={() => onCambiarManicurista && onCambiarManicurista(String(m.id))}
+            >
+              🌸 {m.nombre.split(' ')[0]}
+            </button>
+          ))}
+        </div>
+
         {/* Barra de leyenda explicativa e intuitiva */}
         <div className="gcal-legend-bar">
           <span className="gcal-legend-item"><span className="gcal-legend-dot blue" /> Cita Ocupada</span>
@@ -450,7 +665,7 @@ function App() {
                       <span className="gcal-event-title">💅 {c.servicio_nombre || 'Cita de salón'}</span>
                       <span className="gcal-event-time-pill">{formatearHora12(c.hora_inicio)} – {formatearHora12(c.hora_fin)}</span>
                     </div>
-                    {c.heightPx >= 46 && (
+                    {c.heightPx >= 48 && (
                       <div className="gcal-event-meta-row">
                         <span className="gcal-event-client">👤 {c.cliente_nombre || 'Clienta'}</span>
                         {c.manicurista_nombre && (
@@ -797,14 +1012,16 @@ function App() {
           manicurista_id: formReserva.manicurista_id ? Number(formReserva.manicurista_id) : null,
           fecha: formReserva.fecha,
           hora_inicio: formReserva.hora_inicio,
-          observacion: formReserva.observacion
+          observacion: formReserva.observacion,
+          comprobante_pago: formReserva.comprobante_pago ? formReserva.comprobante_pago.trim() : null,
+          monto_anticipo: formReserva.comprobante_pago ? 20000 : 0
         })
       });
 
       const data = await res.json();
       if (res.ok) {
         mostrarAlerta(`✨ ¡${serviciosSeleccionados.length > 1 ? 'Combo de servicios agendado' : 'Cita agendada'} con éxito! Reserva #${data.cita_id}`, 'success');
-        setFormReserva({ fecha: '', hora_inicio: '10:00:00', observacion: '' });
+        setFormReserva({ fecha: fechaHoy, hora_inicio: '10:00:00', observacion: '', manicurista_id: '', comprobante_pago: '' });
         cargarMisCitas();
         irA('citas');
       } else {
@@ -864,6 +1081,7 @@ function App() {
         { id: 'inicio', etiqueta: 'Inicio', icono: '⌂' },
         { id: 'nosotros', etiqueta: 'Nosotros', icono: '◈' },
         { id: 'tratamientos', etiqueta: 'Tratamientos', icono: '✧' },
+        { id: 'disenos', etiqueta: 'Diseños', icono: '✨' },
         { id: 'admin', etiqueta: 'Panel', icono: '☰' },
         { id: 'contacto', etiqueta: 'Contacto', icono: '☎' }
       ]
@@ -871,6 +1089,7 @@ function App() {
         { id: 'inicio', etiqueta: 'Inicio', icono: '⌂' },
         { id: 'nosotros', etiqueta: 'Nosotros', icono: '◈' },
         { id: 'tratamientos', etiqueta: 'Tratamientos', icono: '✧' },
+        { id: 'disenos', etiqueta: 'Diseños', icono: '✨' },
         { id: 'reservar', etiqueta: 'Reservar', icono: '◷' },
         ...(usuario ? [{ id: 'citas', etiqueta: 'Mis Citas', icono: '☑' }] : []),
         { id: 'contacto', etiqueta: 'Contacto', icono: '☎' }
@@ -1300,6 +1519,43 @@ function App() {
                           <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Manicurista Asignada</label>
                           <p style={{ margin: 0, fontWeight: 600 }}>💅 {citaDetalleModal.manicurista_nombre || 'Sin asignar'}</p>
                         </div>
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Estado de Pago & Anticipo</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                            <span className={`pago-pill pago-${citaDetalleModal.estado_pago || 'pendiente'}`}>
+                              {citaDetalleModal.estado_pago || 'pendiente'}
+                            </span>
+                            {citaDetalleModal.comprobante_pago && (
+                              <span style={{ fontSize: '0.82rem', color: '#e2e8f0', background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: '4px' }}>
+                                🔖 Ref: #{citaDetalleModal.comprobante_pago} {citaDetalleModal.monto_anticipo ? `($${Number(citaDetalleModal.monto_anticipo).toLocaleString()})` : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+                            <button
+                              type="button"
+                              className="btn-pago-quick"
+                              onClick={() => {
+                                actualizarEstadoPago(citaDetalleModal.id, 'parcial');
+                                setCitaDetalleModal({ ...citaDetalleModal, estado_pago: 'parcial' });
+                                cargarCitasGcalAdmin(fechaAdminGcal, filtroManicuristaGcal);
+                              }}
+                            >
+                              🟡 Marcar Anticipo (Parcial)
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-pago-quick"
+                              onClick={() => {
+                                actualizarEstadoPago(citaDetalleModal.id, 'pagado');
+                                setCitaDetalleModal({ ...citaDetalleModal, estado_pago: 'pagado' });
+                                cargarCitasGcalAdmin(fechaAdminGcal, filtroManicuristaGcal);
+                              }}
+                            >
+                              🟢 Marcar Pagado Total
+                            </button>
+                          </div>
+                        </div>
                         {citaDetalleModal.observacion && (
                           <div>
                             <label style={{ fontSize: '0.8rem', color: '#935073', fontWeight: 600 }}>Notas de la Reserva</label>
@@ -1316,7 +1572,7 @@ function App() {
                             onClick={() => {
                               actualizarEstadoCita(citaDetalleModal.id, 2);
                               setCitaDetalleModal(null);
-                              cargarCitasGcalAdmin(fechaAdminGcal);
+                              cargarCitasGcalAdmin(fechaAdminGcal, filtroManicuristaGcal);
                             }}
                           >
                             ✓ Confirmar Cita
@@ -1328,7 +1584,7 @@ function App() {
                             onClick={() => {
                               actualizarEstadoCita(citaDetalleModal.id, 4);
                               setCitaDetalleModal(null);
-                              cargarCitasGcalAdmin(fechaAdminGcal);
+                              cargarCitasGcalAdmin(fechaAdminGcal, filtroManicuristaGcal);
                             }}
                           >
                             🌟 Marcar Atendida
@@ -1340,7 +1596,7 @@ function App() {
                             onClick={() => {
                               actualizarEstadoCita(citaDetalleModal.id, 3);
                               setCitaDetalleModal(null);
-                              cargarCitasGcalAdmin(fechaAdminGcal);
+                              cargarCitasGcalAdmin(fechaAdminGcal, filtroManicuristaGcal);
                             }}
                           >
                             ✕ Cancelar Cita
@@ -1357,9 +1613,14 @@ function App() {
                       fecha: fechaAdminGcal,
                       citas: citasGcalAdmin,
                       esAdminMode: true,
+                      manicuristaSeleccionada: filtroManicuristaGcal,
+                      onCambiarManicurista: (mId) => {
+                        setFiltroManicuristaGcal(mId);
+                        cargarCitasGcalAdmin(fechaAdminGcal, mId);
+                      },
                       onCambiarFecha: (nuevaF) => {
                         setFechaAdminGcal(nuevaF);
-                        cargarCitasGcalAdmin(nuevaF);
+                        cargarCitasGcalAdmin(nuevaF, filtroManicuristaGcal);
                       }
                     })}
                   </div>
@@ -2011,8 +2272,37 @@ function App() {
                   )}
                 </div>
 
-                {/* PASO 4: Notas y Confirmación */}
+                {/* PASO 4: Notas, Anticipo Opcional y Confirmación */}
                 <div className="reserva-step-card">
+                  <div className="reserva-step-header">
+                    <span className="reserva-step-num">4</span>
+                    <div>
+                      <h4 className="reserva-step-title">Anticipo & Confirmación</h4>
+                      <p className="reserva-step-hint">Asegura tu cita con Nequi o Daviplata</p>
+                    </div>
+                  </div>
+
+                  <div className="reserva-pago-card">
+                    <div className="reserva-pago-header">
+                      <span className="reserva-pago-title">💳 Anticipo Recomendado ($20,000 COP)</span>
+                      <span className="reserva-pago-badge">Opcional</span>
+                    </div>
+                    <p className="reserva-pago-desc">
+                      Puedes transferir tu anticipo para apartar tu turno prioritario. El saldo restante se cancela al finalizar tu sesión en el salón.
+                    </p>
+                    <div className="reserva-pago-canales">
+                      <span className="pago-banco-pill nequi">🟣 Nequi: 314 892 4571</span>
+                      <span className="pago-banco-pill daviplata">🔴 Daviplata: 314 892 4571</span>
+                    </div>
+                    <input
+                      type="text"
+                      className="reserva-input-comprobante"
+                      placeholder="N° de comprobante / referencia (si transferiste)"
+                      value={formReserva.comprobante_pago || ''}
+                      onChange={(e) => setFormReserva({ ...formReserva, comprobante_pago: e.target.value })}
+                    />
+                  </div>
+
                   <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                     <label style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 600 }}>Notas o referencias de diseño (Opcional)</label>
                     <textarea
@@ -2065,6 +2355,8 @@ function App() {
                       fecha: formReserva.fecha,
                       citas: horasOcupadas,
                       esAdminMode: false,
+                      manicuristaSeleccionada: formReserva.manicurista_id,
+                      onCambiarManicurista: (mId) => setFormReserva({ ...formReserva, manicurista_id: mId }),
                       onCambiarFecha: (nuevaF) => setFormReserva({ ...formReserva, fecha: nuevaF }),
                       onSeleccionarHora: (nuevaH) => setFormReserva({ ...formReserva, hora_inicio: nuevaH }),
                       horaSeleccionada: formReserva.hora_inicio,
@@ -2215,6 +2507,39 @@ function App() {
           </section>
           )}
 
+          {pagina === 'disenos' && (
+            <section className="section lookbook-section">
+              <div className="section-header">
+                <span className="section-badge">✨ Tendencias & Lookbook</span>
+                <h2>Galería de Diseños Exclusivos</h2>
+                <p>Inspírate con las últimas tendencias de nail art y selecciona tu diseño favorito para agendarlo directamente con tu manicurista.</p>
+              </div>
+
+              <div className="lookbook-grid">
+                {DISENOS_LOOKBOOK.map(d => (
+                  <article key={d.id} className="lookbook-card">
+                    <div className="lookbook-img-wrapper">
+                      <img src={d.imagen} alt={d.titulo} className="lookbook-img" loading="lazy" />
+                      <span className="lookbook-category-pill">{d.categoria}</span>
+                      {d.popular && <span className="lookbook-popular-badge">🔥 TENDENCIA</span>}
+                    </div>
+                    <div className="lookbook-content">
+                      <h3 className="lookbook-title">{d.titulo}</h3>
+                      <p className="lookbook-desc">{d.descripcion}</p>
+                      <button
+                        type="button"
+                        className="lookbook-select-btn"
+                        onClick={() => seleccionarDisenoLookbook(d)}
+                      >
+                        ✨ Quiero este diseño
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
           {pagina === 'citas' && usuario && !esAdmin && (
             <section id="mis-citas" className="section mis-citas-section">
               <div className="section-header">
@@ -2238,13 +2563,60 @@ function App() {
                       <div className="cita-info">
                         <p>📅 <strong>Fecha:</strong> {mc.fecha?.substring(0, 10)}</p>
                         <p>🕒 <strong>Horario:</strong> {mc.hora_inicio?.substring(0, 5)} - {mc.hora_fin?.substring(0, 5)}</p>
+                        <p>✨ <strong>Profesional:</strong> {mc.manicurista_nombre || 'Sin asignar'}</p>
                         <p>⏱ <strong>Duración:</strong> {mc.duracion_min} minutos</p>
                         <p>💵 <strong>Inversión:</strong> ${Number(mc.precio).toLocaleString()} COP</p>
-                        <p>💳 <strong>Pago:</strong> {mc.estado_pago}</p>
+                        <p>💳 <strong>Pago:</strong> <span className={`pago-pill pago-${mc.estado_pago || 'pendiente'}`}>{mc.estado_pago || 'pendiente'}</span></p>
+                        {mc.comprobante_pago && (
+                          <p>🔖 <strong>Comprobante:</strong> #{mc.comprobante_pago}</p>
+                        )}
                       </div>
                       {mc.observacion && (
                         <p className="cita-obs"><em>"{mc.observacion}"</em></p>
                       )}
+
+                      {/* Botones de Autogestión y Calendario */}
+                      <div className="cita-actions-bar">
+                        <button
+                          type="button"
+                          className="btn-cita-action btn-calendar-ics"
+                          onClick={() => generarICS(mc)}
+                          title="Descargar archivo .ICS para sincronizar tu agenda móvil"
+                        >
+                          📅 Guardar .ICS
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-cita-action btn-calendar-gcal"
+                          onClick={() => abrirEnGoogleCalendarWeb(mc)}
+                          title="Abrir en Google Calendar Web"
+                        >
+                          🗓 Google Calendar
+                        </button>
+                        {mc.estado_id !== 3 && mc.estado_id !== 4 && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-cita-action btn-cita-reprogramar"
+                              onClick={() => setReprogramarModal({
+                                id: mc.id,
+                                servicio_nombre: mc.servicio_nombre,
+                                fecha: mc.fecha?.substring(0, 10) || fechaHoy,
+                                hora_inicio: mc.hora_inicio || '10:00:00'
+                              })}
+                            >
+                              🔄 Reprogramar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-cita-action btn-cita-cancelar"
+                              onClick={() => cancelarCitaCliente(mc.id)}
+                            >
+                              ✕ Cancelar Cita
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2281,6 +2653,51 @@ function App() {
         <p>© 2026 Glam Nails Studio & Spa — Arte y cuidado premium en tus manos</p>
       </footer>
       </div>
+
+      {/* MODAL REPROGRAMAR CITA (CLIENTE) */}
+      {reprogramarModal && (
+        <div className="modal-backdrop" onClick={() => setReprogramarModal(null)}>
+          <div className="modal-reprogramar-card" onClick={(e) => e.stopPropagation()}>
+            <button className="desert-close-btn" onClick={() => setReprogramarModal(null)}>✕</button>
+            <div className="modal-reprogramar-header">
+              <h3>🔄 Reprogramar Cita #{reprogramarModal.id}</h3>
+              <p className="modal-reprogramar-sub">💅 {reprogramarModal.servicio_nombre}</p>
+            </div>
+            <form onSubmit={ejecutarReprogramar} className="modal-reprogramar-form">
+              <div className="form-group">
+                <label>📅 Nueva Fecha:</label>
+                <input
+                  type="date"
+                  min={fechaHoy}
+                  value={reprogramarModal.fecha}
+                  onChange={(e) => setReprogramarModal({ ...reprogramarModal, fecha: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>🕒 Nuevo Horario:</label>
+                <select
+                  value={reprogramarModal.hora_inicio}
+                  onChange={(e) => setReprogramarModal({ ...reprogramarModal, hora_inicio: e.target.value })}
+                  required
+                >
+                  {HORARIOS_DISPONIBLES.map(h => (
+                    <option key={h.valor} value={h.valor}>{h.etiqueta}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-reprogramar-actions">
+                <button type="button" className="btn-pago-quick" onClick={() => setReprogramarModal(null)}>
+                  Volver
+                </button>
+                <button type="submit" className="submit-btn" style={{ padding: '0.6rem 1.2rem' }}>
+                  Guardar Nueva Fecha ✦
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL AUTH */}
       {tipoModal && (

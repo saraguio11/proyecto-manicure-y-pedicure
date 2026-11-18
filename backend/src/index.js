@@ -77,6 +77,17 @@ async function agregarColumnaSiNoExiste(tabla, columna, definicion) {
       `);
     }
     await agregarColumnaSiNoExiste('citas', 'manicurista_id', 'INT UNSIGNED NULL AFTER servicio_id');
+    await agregarColumnaSiNoExiste('citas', 'estado_pago', "ENUM('pendiente','parcial','pagado') NOT NULL DEFAULT 'pendiente' AFTER observacion");
+    await agregarColumnaSiNoExiste('citas', 'comprobante_pago', 'VARCHAR(120) NULL AFTER estado_pago');
+    await agregarColumnaSiNoExiste('citas', 'monto_anticipo', 'DECIMAL(10,2) NULL AFTER comprobante_pago');
+
+    // Permitir citas paralelas con diferentes manicuristas eliminando la restricción de cita única global
+    try {
+      await pool.query('ALTER TABLE citas DROP INDEX uq_citas_horario_activo');
+      console.log('✓ Restricción uq_citas_horario_activo retirada para soportar agendas paralelas');
+    } catch (dropIdxErr) {
+      // Índice ya retirado o no presente
+    }
   } catch (err) {
     console.warn('DB Sync info (continuando normal):', err.message);
   }

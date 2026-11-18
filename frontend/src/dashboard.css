@@ -1829,7 +1829,7 @@
   background: #1a73e8; /* Google Blue */
   color: #ffffff;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 3px 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   cursor: pointer;
@@ -1838,7 +1838,9 @@
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 2px;
   border-left: 3px solid rgba(255, 255, 255, 0.85);
   text-align: left;
 }
@@ -1866,14 +1868,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.4rem;
-  line-height: 1.25;
+  gap: 0.35rem;
+  line-height: 1.15;
 }
 
 .gcal-event-title {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1881,10 +1883,11 @@
 }
 
 .gcal-event-time-pill {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  background: rgba(0, 0, 0, 0.22);
-  padding: 1px 6px;
+  line-height: 1.15;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 1px 5px;
   border-radius: 4px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1895,10 +1898,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 2px;
-  font-size: 0.73rem;
-  line-height: 1.2;
+  gap: 0.4rem;
+  margin-top: 1px;
+  font-size: 0.70rem;
+  line-height: 1.15;
   opacity: 0.95;
 }
 
@@ -2180,4 +2183,345 @@
   border-radius: 8px;
   border: 1px dashed rgba(255, 255, 255, 0.15);
   text-align: center;
+}
+
+/* ── BARRA DE FILTRO POR MANICURISTA GCAL ── */
+.gcal-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+.gcal-filter-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.gcal-filter-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gcal-filter-chip:hover {
+  background: rgba(192, 132, 252, 0.15);
+  border-color: #c084fc;
+  color: #ffffff;
+}
+.gcal-filter-chip.active {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  border-color: #f472b6;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+/* ── LOOKBOOK GALERÍA DE DISEÑOS ── */
+.lookbook-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+.lookbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.lookbook-card {
+  background: rgba(30, 16, 45, 0.75);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  backdrop-filter: blur(12px);
+}
+.lookbook-card:hover {
+  transform: translateY(-5px);
+  border-color: #c084fc;
+  box-shadow: 0 12px 28px rgba(192, 132, 252, 0.25);
+}
+.lookbook-img-wrapper {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+}
+.lookbook-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.lookbook-card:hover .lookbook-img {
+  transform: scale(1.05);
+}
+.lookbook-category-pill {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(15, 7, 26, 0.85);
+  color: #f3e8ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  backdrop-filter: blur(6px);
+}
+.lookbook-popular-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+}
+.lookbook-content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.lookbook-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.5rem 0;
+}
+.lookbook-desc {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin: 0 0 1.2rem 0;
+  flex-grow: 1;
+}
+.lookbook-select-btn {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.35);
+  text-align: center;
+}
+.lookbook-select-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.45);
+}
+
+/* ── PAGO Y COMPROBANTE (NEQUI / DAVIPLATA) ── */
+.reserva-pago-card {
+  background: rgba(30, 16, 45, 0.8);
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  border-radius: 12px;
+  padding: 0.9rem;
+  margin-bottom: 0.85rem;
+}
+.reserva-pago-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+.reserva-pago-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f3e8ff;
+}
+.reserva-pago-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+.reserva-pago-desc {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.35;
+}
+.reserva-pago-canales {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+.pago-banco-pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.pago-banco-pill.nequi {
+  background: rgba(147, 51, 234, 0.25);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+.pago-banco-pill.daviplata {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.reserva-input-comprobante {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(15, 7, 26, 0.7);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  outline: none;
+}
+.reserva-input-comprobante:focus {
+  border-color: #ec4899;
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.35);
+}
+
+/* ── MIS CITAS: ACCIONES Y CALENDARIO ── */
+.cita-actions-bar {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+.btn-cita-action {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.btn-calendar-ics {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+.btn-calendar-ics:hover {
+  background: rgba(59, 130, 246, 0.35);
+  color: #ffffff;
+}
+.btn-calendar-gcal {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.btn-calendar-gcal:hover {
+  background: rgba(16, 185, 129, 0.35);
+  color: #ffffff;
+}
+.btn-cita-reprogramar {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+.btn-cita-reprogramar:hover {
+  background: rgba(234, 179, 8, 0.35);
+  color: #ffffff;
+}
+.btn-cita-cancelar {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.btn-cita-cancelar:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #ffffff;
+}
+
+/* Modal Reprogramar */
+.modal-reprogramar-card {
+  max-width: 440px;
+  width: 90%;
+  background: #1c0f2a;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+  position: relative;
+}
+.modal-reprogramar-header h3 {
+  margin: 0 0 0.3rem 0;
+  color: #f3e8ff;
+  font-size: 1.15rem;
+}
+.modal-reprogramar-sub {
+  margin: 0 0 1rem 0;
+  font-size: 0.85rem;
+  color: #c084fc;
+}
+.modal-reprogramar-form .form-group {
+  margin-bottom: 1rem;
+}
+.modal-reprogramar-form label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 0.3rem;
+}
+.modal-reprogramar-form input,
+.modal-reprogramar-form select {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(15, 7, 26, 0.8);
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  color: #ffffff;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.modal-reprogramar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+.btn-pago-quick {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-pago-quick:hover {
+  background: rgba(192, 132, 252, 0.25);
+  border-color: #c084fc;
+  color: #ffffff;
 }
