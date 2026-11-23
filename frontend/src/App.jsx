@@ -229,6 +229,20 @@ function App() {
   const [citaDetalleModal, setCitaDetalleModal] = useState(null);
   const [filtroManicuristaGcal, setFiltroManicuristaGcal] = useState('');
   const [reprogramarModal, setReprogramarModal] = useState(null);
+  // Citas ocupadas para el calendario interactivo del modal de reprogramar
+  const [horasOcupadasReprogramar, setHorasOcupadasReprogramar] = useState([]);
+
+  // Cargar citas ocupadas cuando cambia la fecha en el modal de reprogramar
+  useEffect(() => {
+    if (!reprogramarModal?.fecha) {
+      setHorasOcupadasReprogramar([]);
+      return;
+    }
+    fetch(`${API_BASE}/citas/disponibilidad?fecha=${reprogramarModal.fecha}`)
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setHorasOcupadasReprogramar(data); })
+      .catch(err => console.error(err));
+  }, [reprogramarModal?.fecha]);
 
   const cargarCitasGcalAdmin = (f, mId) => {
     const targetFecha = f || fechaAdminGcal;
@@ -329,8 +343,7 @@ function App() {
     }
   };
 
-  const ejecutarReprogramar = async (e) => {
-    e.preventDefault();
+  const ejecutarReprogramar = async () => {
     if (!reprogramarModal?.id || !reprogramarModal?.fecha || !reprogramarModal?.hora_inicio) {
       return mostrarAlerta('Selecciona nueva fecha y hora', 'error');
     }
@@ -2601,8 +2614,9 @@ function App() {
                               onClick={() => setReprogramarModal({
                                 id: mc.id,
                                 servicio_nombre: mc.servicio_nombre,
+                                duracion_min: mc.duracion_min,
                                 fecha: mc.fecha?.substring(0, 10) || fechaHoy,
-                                hora_inicio: mc.hora_inicio || '10:00:00'
+                                hora_inicio: ''
                               })}
                             >
                               🔄 Reprogramar
@@ -2657,44 +2671,75 @@ function App() {
       {/* MODAL REPROGRAMAR CITA (CLIENTE) */}
       {reprogramarModal && (
         <div className="modal-backdrop" onClick={() => setReprogramarModal(null)}>
-          <div className="modal-reprogramar-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-reprogramar-card modal-reprogramar-wide" onClick={(e) => e.stopPropagation()}>
             <button className="desert-close-btn" onClick={() => setReprogramarModal(null)}>✕</button>
+
             <div className="modal-reprogramar-header">
               <h3>🔄 Reprogramar Cita #{reprogramarModal.id}</h3>
               <p className="modal-reprogramar-sub">💅 {reprogramarModal.servicio_nombre}</p>
             </div>
-            <form onSubmit={ejecutarReprogramar} className="modal-reprogramar-form">
-              <div className="form-group">
-                <label>📅 Nueva Fecha:</label>
+
+            {/* Barra superior: selector fecha + resumen hora elegida */}
+            <div className="reprogramar-top-bar">
+              <div className="form-group reprogramar-fecha-group">
+                <label>📅 Elegir nueva fecha:</label>
                 <input
                   type="date"
                   min={fechaHoy}
                   value={reprogramarModal.fecha}
-                  onChange={(e) => setReprogramarModal({ ...reprogramarModal, fecha: e.target.value })}
-                  required
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setReprogramarModal({ ...reprogramarModal, fecha: e.target.value, hora_inicio: '' });
+                    }
+                  }}
                 />
               </div>
-              <div className="form-group">
-                <label>🕒 Nuevo Horario:</label>
-                <select
-                  value={reprogramarModal.hora_inicio}
-                  onChange={(e) => setReprogramarModal({ ...reprogramarModal, hora_inicio: e.target.value })}
-                  required
-                >
-                  {HORARIOS_DISPONIBLES.map(h => (
-                    <option key={h.valor} value={h.valor}>{h.etiqueta}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="modal-reprogramar-actions">
-                <button type="button" className="btn-pago-quick" onClick={() => setReprogramarModal(null)}>
-                  Volver
-                </button>
-                <button type="submit" className="submit-btn" style={{ padding: '0.6rem 1.2rem' }}>
-                  Guardar Nueva Fecha ✦
-                </button>
-              </div>
-            </form>
+              {reprogramarModal.hora_inicio ? (
+                <div className="reprogramar-hora-elegida">
+                  <span>✅ Hora seleccionada:</span>
+                  <strong>
+                    {formatearHora12(reprogramarModal.hora_inicio)}
+                    {reprogramarModal.duracion_min
+                      ? ` → ${formatearHora12(calcularHoraFin(reprogramarModal.hora_inicio, reprogramarModal.duracion_min))}`
+                      : ''}
+                  </strong>
+                </div>
+              ) : (
+                <div className="reprogramar-hora-vacia">
+                  👆 Toca una franja libre en el calendario para elegir tu horario
+                </div>
+              )}
+            </div>
+
+            {/* Calendario interactivo igual al de reserva */}
+            {reprogramarModal.fecha && renderGoogleCalendar({
+              fecha: reprogramarModal.fecha,
+              citas: horasOcupadasReprogramar,
+              esAdminMode: false,
+              onCambiarFecha: (nuevaF) => {
+                if (nuevaF >= fechaHoy) {
+                  setReprogramarModal({ ...reprogramarModal, fecha: nuevaF, hora_inicio: '' });
+                }
+              },
+              onSeleccionarHora: (nuevaH) => setReprogramarModal({ ...reprogramarModal, hora_inicio: nuevaH }),
+              horaSeleccionada: reprogramarModal.hora_inicio,
+              duracion: reprogramarModal.duracion_min || 60
+            })}
+
+            <div className="modal-reprogramar-actions">
+              <button type="button" className="btn-pago-quick" onClick={() => setReprogramarModal(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="submit-btn"
+                style={{ padding: '0.6rem 1.4rem' }}
+                disabled={!reprogramarModal.fecha || !reprogramarModal.hora_inicio}
+                onClick={ejecutarReprogramar}
+              >
+                {!reprogramarModal.hora_inicio ? 'Selecciona una hora ↑' : 'Guardar Nueva Fecha ✦'}
+              </button>
+            </div>
           </div>
         </div>
       )}

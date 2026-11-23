@@ -2525,3 +2525,57 @@
   border-color: #c084fc;
   color: #ffffff;
 }
+
+
+/* ============================================================
+   MODAL REPROGRAMAR — VERSIÓN CON CALENDARIO INTERACTIVO
+   ============================================================ */
+.modal-reprogramar-wide {
+  max-width: 860px;
+  width: 95vw;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+/* Barra superior: fecha + indicador de hora */
+.reprogramar-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reprogramar-fecha-group {
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
+}
+
+/* Indicador de hora ya seleccionada */
+.reprogramar-hora-elegida {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: #6ee7b7;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reprogramar-hora-elegida strong {
+  color: #a7f3d0;
+  font-size: 0.95rem;
+}
+
+/* Indicador cuando aún no ha elegido hora */
+.reprogramar-hora-vacia {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-style: italic;
+}
