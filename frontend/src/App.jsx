@@ -466,7 +466,35 @@ function App() {
 
   // Dashboard stats
   const [dashStats, setDashStats] = useState(null);
-  const [dashSeccion, setDashSeccion] = useState('dashboard'); // dashboard | citas | servicios | manicuristas | clientas
+  const [dashSeccion, setDashSeccion] = useState('dashboard'); // dashboard | citas | servicios | manicuristas | clientas | reportes
+
+  // ── Reportes (admin) ──
+  const [reporteData, setReporteData] = useState(null);
+  const [cargandoReporte, setCargandoReporte] = useState(false);
+  const [filtroReporte, setFiltroReporte] = useState({
+    desde: '',
+    hasta: '',
+    manicurista_id: '',
+    servicio_id: '',
+    usuario_id: '',
+    estado_id: '',
+    busqueda: '',
+    orden: 'fecha_desc'
+  });
+
+  // ── Gestión de Usuarios y Roles (admin) ──
+  const [usuariosAdmin, setUsuariosAdmin] = useState([]);
+  const [cargandoUsuarios, setCargandoUsuarios] = useState(false);
+  const [modalNuevoUsuario, setModalNuevoUsuario] = useState(false);
+  const [guardandoUsuario, setGuardandoUsuario] = useState(false);
+  const [formNuevoUsuario, setFormNuevoUsuario] = useState({
+    nombre_completo: '',
+    documento: '',
+    telefono: '',
+    correo: '',
+    password: '',
+    rol_id: '1'
+  });
 
   // ── CRUD Servicios (admin) ──
   const [modalServicio, setModalServicio] = useState(null); // null | 'nuevo' | objeto_servicio
@@ -945,11 +973,167 @@ function App() {
         cargarCitasAdmin();
         cargarDashStats();
         cargarManicuristas();
+        cargarUsuariosAdmin();
       } else {
         cargarMisCitas();
       }
     }
   }, [usuario, token, filtroEstado]);
+
+  const cargarUsuariosAdmin = async () => {
+    if (!token) return;
+    setCargandoUsuarios(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios`, { headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) setUsuariosAdmin(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCargandoUsuarios(false);
+    }
+  };
+
+  const crearUsuarioAdmin = async (e) => {
+    e.preventDefault();
+    const { nombre_completo, documento, telefono, correo, password, rol_id } = formNuevoUsuario;
+    if (!NOMBRE_REGEX.test(nombre_completo.trim())) {
+      return mostrarAlerta('El nombre debe tener entre 3 y 100 letras sin números ni símbolos', 'error');
+    }
+    if (!DOCUMENTO_REGEX.test(documento.trim())) {
+      return mostrarAlerta('El documento debe tener entre 5 y 15 dígitos numéricos', 'error');
+    }
+    if (!TELEFONO_REGEX.test(telefono.trim())) {
+      return mostrarAlerta('El teléfono debe ser numérico válido (7 a 15 dígitos)', 'error');
+    }
+    if (!EMAIL_REGEX.test(correo.trim().toLowerCase())) {
+      return mostrarAlerta('El correo electrónico no es válido', 'error');
+    }
+    if (password.length < 6 || password.length > 100) {
+      return mostrarAlerta('La contraseña debe tener entre 6 y 100 caracteres', 'error');
+    }
+    setGuardandoUsuario(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ ...formNuevoUsuario, correo: correo.trim().toLowerCase(), rol_id: Number(rol_id) })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta(data.mensaje || 'Usuario creado exitosamente', 'success');
+        setModalNuevoUsuario(false);
+        setFormNuevoUsuario({ nombre_completo: '', documento: '', telefono: '', correo: '', password: '', rol_id: '1' });
+        cargarUsuariosAdmin();
+        cargarDashStats();
+      } else {
+        mostrarAlerta(data.error || 'Error al crear usuario', 'error');
+      }
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    } finally {
+      setGuardandoUsuario(false);
+    }
+  };
+
+  const cambiarRolUsuario = async (id, nuevoRolId) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${id}/rol`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ rol_id: Number(nuevoRolId) })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta(data.mensaje || 'Rol actualizado', 'success');
+        cargarUsuariosAdmin();
+      } else {
+        mostrarAlerta(data.error || 'No se pudo actualizar el rol', 'error');
+      }
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    }
+  };
+
+  const toggleEstadoUsuario = async (u) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${u.id}/rol`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ activo: !u.activo })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        mostrarAlerta(data.mensaje || 'Estado actualizado', 'success');
+        cargarUsuariosAdmin();
+      } else {
+        mostrarAlerta(data.error || 'No se pudo cambiar el estado', 'error');
+      }
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    }
+  };
+
+  const cargarReporte = async (filtrosCustom = null) => {
+    if (!token) return;
+    const f = filtrosCustom || filtroReporte;
+    setCargandoReporte(true);
+    try {
+      const qs = new URLSearchParams();
+      if (f.desde) qs.append('desde', f.desde);
+      if (f.hasta) qs.append('hasta', f.hasta);
+      if (f.manicurista_id) qs.append('manicurista_id', f.manicurista_id);
+      if (f.servicio_id) qs.append('servicio_id', f.servicio_id);
+      if (f.usuario_id) qs.append('usuario_id', f.usuario_id);
+      if (f.estado_id) qs.append('estado_id', f.estado_id);
+      if (f.busqueda.trim()) qs.append('busqueda', f.busqueda.trim());
+      if (f.orden) qs.append('orden', f.orden);
+      const res = await fetch(`${API_BASE}/admin/reportes?${qs.toString()}`, { headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok) setReporteData(data);
+      else mostrarAlerta(data.error || 'Error al generar reporte', 'error');
+    } catch (err) {
+      mostrarAlerta('Error: ' + err.message, 'error');
+    } finally {
+      setCargandoReporte(false);
+    }
+  };
+
+  const exportarReporteCSV = () => {
+    if (!reporteData?.detalle?.length) {
+      return mostrarAlerta('No hay datos para exportar', 'warning');
+    }
+    const headers = ['ID', 'Fecha', 'Inicio', 'Fin', 'Clienta', 'Telefono', 'Servicio', 'Manicurista', 'Estado', 'Pago', 'Comprobante', 'Precio COP'];
+    const filas = reporteData.detalle.map(c => [
+      c.id,
+      c.fecha?.substring(0, 10) || '',
+      c.hora_inicio?.substring(0, 5) || '',
+      c.hora_fin?.substring(0, 5) || '',
+      `"${String(c.cliente_nombre || '').replace(/"/g, '""')}"`,
+      c.cliente_telefono || '',
+      `"${String(c.servicio_nombre || '').replace(/"/g, '""')}"`,
+      `"${String(c.manicurista_nombre || '').replace(/"/g, '""')}"`,
+      c.estado_nombre || '',
+      c.estado_pago || 'pendiente',
+      c.comprobante_pago || '',
+      Number(c.precio || 0)
+    ]);
+    const csv = '\uFEFF' + [headers.join(','), ...filas.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Reporte_GlamNails_${fechaHoy}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    mostrarAlerta('📥 Reporte CSV descargado para Excel', 'success');
+  };
+
+  useEffect(() => {
+    if (esAdmin && dashSeccion === 'reportes') {
+      cargarReporte();
+    }
+  }, [esAdmin, dashSeccion]);
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
@@ -1177,6 +1361,7 @@ function App() {
         { id: 'tratamientos', etiqueta: 'Tratamientos', icono: '✧' },
         { id: 'disenos', etiqueta: 'Diseños', icono: '✨' },
         { id: 'admin', etiqueta: 'Panel', icono: '☰' },
+        { id: 'manual', etiqueta: 'Manual', icono: '📖' },
         { id: 'contacto', etiqueta: 'Contacto', icono: '☎' }
       ]
     : [
@@ -1186,6 +1371,7 @@ function App() {
         { id: 'disenos', etiqueta: 'Diseños', icono: '✨' },
         { id: 'reservar', etiqueta: 'Reservar', icono: '◷' },
         ...(usuario ? [{ id: 'citas', etiqueta: 'Mis Citas', icono: '☑' }] : []),
+        { id: 'manual', etiqueta: 'Manual', icono: '📖' },
         { id: 'contacto', etiqueta: 'Contacto', icono: '☎' }
       ];
 
@@ -1290,7 +1476,8 @@ function App() {
                 { id: 'citas', label: 'Citas', icon: '📅' },
                 { id: 'servicios', label: 'Servicios', icon: '✨' },
                 { id: 'manicuristas', label: 'Manicuristas', icon: '💅' },
-                { id: 'clientas', label: 'Clientas', icon: '👥' },
+                { id: 'reportes', label: 'Reportes', icon: '📊' },
+                { id: 'clientas', label: 'Usuarios', icon: '👥' },
               ].map(item => (
                 <button
                   key={item.id}
@@ -2006,44 +2193,343 @@ function App() {
               </div>
             )}
 
-            {/* ── SECCIÓN CLIENTAS ── */}
+            {/* ── SECCIÓN REPORTES GENERALES Y ESPECÍFICOS ── */}
+            {dashSeccion === 'reportes' && (
+              <div className="dash-content">
+                <div className="dash-topbar">
+                  <div>
+                    <h2 className="dash-title">Reportes Generales y Específicos</h2>
+                    <p className="dash-subtitle">Filtra por fechas, clienta, servicio, manicurista o estado y exporta en CSV o PDF</p>
+                  </div>
+                  <div className="dash-topbar-actions">
+                    <button type="button" className="dash-refresh-btn" onClick={exportarReporteCSV}>📥 Exportar CSV</button>
+                    <button type="button" className="dash-add-btn" onClick={() => window.print()}>🖨 Imprimir / PDF</button>
+                  </div>
+                </div>
+
+                {/* Filtros combinables (Reportes Específicos) */}
+                <div className="reportes-filtros-card">
+                  <div className="reportes-filtros-grid">
+                    <div className="dash-form-group">
+                      <label>📅 Desde</label>
+                      <input type="date" value={filtroReporte.desde} onChange={e => setFiltroReporte({ ...filtroReporte, desde: e.target.value })} />
+                    </div>
+                    <div className="dash-form-group">
+                      <label>📅 Hasta</label>
+                      <input type="date" value={filtroReporte.hasta} onChange={e => setFiltroReporte({ ...filtroReporte, hasta: e.target.value })} />
+                    </div>
+                    <div className="dash-form-group">
+                      <label>💅 Manicurista</label>
+                      <select value={filtroReporte.manicurista_id} onChange={e => setFiltroReporte({ ...filtroReporte, manicurista_id: e.target.value })}>
+                        <option value="">Todas</option>
+                        {manicuristas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                      </select>
+                    </div>
+                    <div className="dash-form-group">
+                      <label>✨ Servicio</label>
+                      <select value={filtroReporte.servicio_id} onChange={e => setFiltroReporte({ ...filtroReporte, servicio_id: e.target.value })}>
+                        <option value="">Todos</option>
+                        {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                      </select>
+                    </div>
+                    <div className="dash-form-group">
+                      <label>👩 Clienta</label>
+                      <select value={filtroReporte.usuario_id} onChange={e => setFiltroReporte({ ...filtroReporte, usuario_id: e.target.value })}>
+                        <option value="">Todas</option>
+                        {usuariosAdmin.filter(u => u.rol_id === 1).map(u => <option key={u.id} value={u.id}>{u.nombre_completo}</option>)}
+                      </select>
+                    </div>
+                    <div className="dash-form-group">
+                      <label>📌 Estado</label>
+                      <select value={filtroReporte.estado_id} onChange={e => setFiltroReporte({ ...filtroReporte, estado_id: e.target.value })}>
+                        <option value="">Todos</option>
+                        <option value="1">Pendiente</option>
+                        <option value="2">Confirmada</option>
+                        <option value="4">Atendida</option>
+                        <option value="3">Cancelada</option>
+                      </select>
+                    </div>
+                    <div className="dash-form-group">
+                      <label>⇅ Ordenar por</label>
+                      <select value={filtroReporte.orden} onChange={e => setFiltroReporte({ ...filtroReporte, orden: e.target.value })}>
+                        <option value="fecha_desc">Fecha (más reciente)</option>
+                        <option value="fecha_asc">Fecha (más antigua)</option>
+                        <option value="precio_desc">Mayor valor</option>
+                        <option value="precio_asc">Menor valor</option>
+                      </select>
+                    </div>
+                    <div className="dash-form-group">
+                      <label>🔍 Búsqueda rápida</label>
+                      <input type="text" placeholder="Nombre, servicio o comprobante..." value={filtroReporte.busqueda} onChange={e => setFiltroReporte({ ...filtroReporte, busqueda: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="reportes-filtros-btns">
+                    <button type="button" className="dash-add-btn" onClick={() => cargarReporte()}>🔎 Aplicar Filtros</button>
+                    <button
+                      type="button"
+                      className="dash-btn-cancel"
+                      onClick={() => {
+                        const limpio = { desde: '', hasta: '', manicurista_id: '', servicio_id: '', usuario_id: '', estado_id: '', busqueda: '', orden: 'fecha_desc' };
+                        setFiltroReporte(limpio);
+                        cargarReporte(limpio);
+                      }}
+                    >
+                      ↺ Limpiar Filtros
+                    </button>
+                  </div>
+                </div>
+
+                {cargandoReporte ? (
+                  <p className="loading">Generando reporte desde la base de datos...</p>
+                ) : reporteData ? (
+                  <>
+                    {/* KPIs Reporte General */}
+                    <div className="dash-stats-grid">
+                      <div className="dash-stat-card stat-purple">
+                        <div className="stat-icon">📋</div>
+                        <div className="stat-info">
+                          <p className="stat-value">{reporteData.resumenGeneral.totalCitas}</p>
+                          <p className="stat-label">Citas Filtradas</p>
+                        </div>
+                      </div>
+                      <div className="dash-stat-card stat-green">
+                        <div className="stat-icon">🌟</div>
+                        <div className="stat-info">
+                          <p className="stat-value">{reporteData.resumenGeneral.citasAtendidas}</p>
+                          <p className="stat-label">Atendidas</p>
+                        </div>
+                      </div>
+                      <div className="dash-stat-card stat-pink">
+                        <div className="stat-icon">💵</div>
+                        <div className="stat-info">
+                          <p className="stat-value">${Number(reporteData.resumenGeneral.ingresosConfirmados).toLocaleString()}</p>
+                          <p className="stat-label">Ingresos Confirmados</p>
+                        </div>
+                      </div>
+                      <div className="dash-stat-card stat-cream">
+                        <div className="stat-icon">📈</div>
+                        <div className="stat-info">
+                          <p className="stat-value">${Number(reporteData.resumenGeneral.ticketPromedio).toLocaleString()}</p>
+                          <p className="stat-label">Ticket Promedio</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Resúmenes por Manicurista y Servicio */}
+                    <div className="dash-bottom-row">
+                      <div className="dash-income-card">
+                        <div className="dash-card-header">
+                          <h3>💅 Rendimiento por Manicurista</h3>
+                          <span className="dash-badge-pill">Específico</span>
+                        </div>
+                        {reporteData.porManicurista.length === 0 ? (
+                          <p className="empty-income">Sin registros en el rango seleccionado.</p>
+                        ) : (
+                          <div className="income-list">
+                            {reporteData.porManicurista.map((pm, idx) => (
+                              <div key={idx} className="income-item">
+                                <div className="income-rank">{idx + 1}</div>
+                                <div className="income-info">
+                                  <p className="income-name">{pm.manicurista_nombre}</p>
+                                  <p className="income-sub">{pm.total_citas} cita(s)</p>
+                                </div>
+                                <div className="income-amount">${Number(pm.ingresos).toLocaleString()} COP</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="dash-income-card">
+                        <div className="dash-card-header">
+                          <h3>✨ Servicios Más Solicitados</h3>
+                          <span className="dash-badge-pill">Top</span>
+                        </div>
+                        {reporteData.porServicio.length === 0 ? (
+                          <p className="empty-income">Sin registros en el rango seleccionado.</p>
+                        ) : (
+                          <div className="income-list">
+                            {reporteData.porServicio.slice(0, 6).map((ps, idx) => (
+                              <div key={idx} className="income-item">
+                                <div className="income-rank">{idx + 1}</div>
+                                <div className="income-info">
+                                  <p className="income-name">{ps.servicio_nombre}</p>
+                                  <p className="income-sub">{ps.total_citas} solicitud(es)</p>
+                                </div>
+                                <div className="income-amount">${Number(ps.ingresos).toLocaleString()} COP</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tabla de detalle del reporte */}
+                    <div className="dash-table-wrap">
+                      <table className="dash-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Fecha / Hora</th>
+                            <th>Clienta</th>
+                            <th>Servicio</th>
+                            <th>Manicurista</th>
+                            <th>Pago</th>
+                            <th>Estado</th>
+                            <th>Valor (COP)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reporteData.detalle.length === 0 ? (
+                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '1.5rem' }}>No hay citas que coincidan con los filtros aplicados.</td></tr>
+                          ) : reporteData.detalle.map(c => (
+                            <tr key={c.id}>
+                              <td><strong>#{c.id}</strong></td>
+                              <td>{c.fecha?.substring(0, 10)}<br /><small>{c.hora_inicio?.substring(0, 5)} - {c.hora_fin?.substring(0, 5)}</small></td>
+                              <td><strong>{c.cliente_nombre}</strong><br /><small>{c.cliente_telefono}</small></td>
+                              <td>{c.servicio_nombre}</td>
+                              <td>{c.manicurista_nombre}</td>
+                              <td><span className={`pago-pill pago-${c.estado_pago || 'pendiente'}`}>{c.estado_pago || 'pendiente'}</span></td>
+                              <td><span className={`dash-badge-estado estado-${c.estado_id}`}>{c.estado_nombre}</span></td>
+                              <td><strong>${Number(c.precio).toLocaleString()}</strong></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <td colSpan="7" style={{ textAlign: 'right', fontWeight: '700' }}>Total Ingresos Confirmados/Atendidos:</td>
+                            <td><strong>${Number(reporteData.resumenGeneral.ingresosConfirmados).toLocaleString()} COP</strong></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            )}
+
+            {/* ── SECCIÓN USUARIOS Y ROLES (ADMIN) ── */}
             {dashSeccion === 'clientas' && (
               <div className="dash-content">
                 <div className="dash-topbar">
                   <div>
-                    <h2 className="dash-title">Clientas</h2>
-                    <p className="dash-subtitle">Historial de citas por clienta</p>
+                    <h2 className="dash-title">Usuarios y Roles</h2>
+                    <p className="dash-subtitle">Crea usuarios, asigna roles (Clienta / Administradora) y administra accesos</p>
+                  </div>
+                  <div className="dash-topbar-actions">
+                    <button type="button" className="dash-refresh-btn" onClick={cargarUsuariosAdmin}>🔄 Actualizar</button>
+                    <button type="button" className="dash-add-btn" onClick={() => setModalNuevoUsuario(true)}>+ Crear Usuario / Rol</button>
                   </div>
                 </div>
-                <div className="dash-table-wrap">
-                  <table className="dash-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Clienta</th>
-                        <th>Servicio(s)</th>
-                        <th>Fecha</th>
-                        <th>Total</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {citasAdmin.map((c) => (
-                        <tr key={c.id}>
-                          <td>#{c.id}</td>
-                          <td>
-                            <strong>{c.cliente_nombre}</strong>
-                            <br /><small>📞 {c.cliente_telefono}</small>
-                          </td>
-                          <td>{c.servicio_nombre}</td>
-                          <td>{c.fecha?.substring(0, 10)}</td>
-                          <td>${Number(c.precio).toLocaleString()}</td>
-                          <td><span className={`dash-badge-estado estado-${c.estado_id}`}>{c.estado_nombre}</span></td>
+
+                {modalNuevoUsuario && (
+                  <div className="dash-modal-overlay" onClick={() => setModalNuevoUsuario(false)}>
+                    <div className="dash-modal" onClick={e => e.stopPropagation()}>
+                      <div className="dash-modal-header">
+                        <h3>✦ Nuevo Usuario y Asignación de Rol</h3>
+                        <button className="dash-modal-close" onClick={() => setModalNuevoUsuario(false)}>✕</button>
+                      </div>
+                      <form className="dash-modal-form" onSubmit={crearUsuarioAdmin} noValidate>
+                        <div className="dash-form-row">
+                          <div className="dash-form-group">
+                            <label>Nombre completo *</label>
+                            <input type="text" required value={formNuevoUsuario.nombre_completo} onChange={e => setFormNuevoUsuario({ ...formNuevoUsuario, nombre_completo: e.target.value })} placeholder="Ej: Laura Martínez" />
+                          </div>
+                          <div className="dash-form-group">
+                            <label>Rol asignado *</label>
+                            <select value={formNuevoUsuario.rol_id} onChange={e => setFormNuevoUsuario({ ...formNuevoUsuario, rol_id: e.target.value })}>
+                              <option value="1">Clienta</option>
+                              <option value="2">Administradora</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="dash-form-row">
+                          <div className="dash-form-group">
+                            <label>Documento / Cédula *</label>
+                            <input type="text" inputMode="numeric" required value={formNuevoUsuario.documento} onChange={e => setFormNuevoUsuario({ ...formNuevoUsuario, documento: e.target.value })} placeholder="Solo números (5-15)" />
+                          </div>
+                          <div className="dash-form-group">
+                            <label>Teléfono *</label>
+                            <input type="tel" inputMode="numeric" required value={formNuevoUsuario.telefono} onChange={e => setFormNuevoUsuario({ ...formNuevoUsuario, telefono: e.target.value })} placeholder="Ej: 3001234567" />
+                          </div>
+                        </div>
+                        <div className="dash-form-row">
+                          <div className="dash-form-group">
+                            <label>Correo electrónico *</label>
+                            <input type="email" required value={formNuevoUsuario.correo} onChange={e => setFormNuevoUsuario({ ...formNuevoUsuario, correo: e.target.value })} placeholder="usuario@correo.com" />
+                          </div>
+                          <div className="dash-form-group">
+                            <label>Contraseña temporal *</label>
+                            <input type="password" required value={formNuevoUsuario.password} onChange={e => setFormNuevoUsuario({ ...formNuevoUsuario, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
+                          </div>
+                        </div>
+                        <div className="dash-modal-actions">
+                          <button type="button" className="dash-btn-cancel" onClick={() => setModalNuevoUsuario(false)}>Cancelar</button>
+                          <button type="submit" className="dash-btn-save" disabled={guardandoUsuario}>
+                            {guardandoUsuario ? 'Creando...' : '+ Crear Usuario'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {cargandoUsuarios ? (
+                  <p className="loading">Cargando usuarios...</p>
+                ) : (
+                  <div className="dash-table-wrap">
+                    <table className="dash-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Usuario</th>
+                          <th>Documento</th>
+                          <th>Contacto</th>
+                          <th>Rol</th>
+                          <th>Citas</th>
+                          <th>Estado</th>
+                          <th>Acción</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {usuariosAdmin.map(u => (
+                          <tr key={u.id} className={!u.activo ? 'row-inactivo' : ''}>
+                            <td><strong>#{u.id}</strong></td>
+                            <td><strong>{u.nombre_completo}</strong></td>
+                            <td>{u.documento}</td>
+                            <td>{u.correo}<br /><small>📞 {u.telefono}</small></td>
+                            <td>
+                              <select
+                                className="dash-select"
+                                value={u.rol_id}
+                                onChange={(e) => cambiarRolUsuario(u.id, e.target.value)}
+                              >
+                                <option value="1">Clienta</option>
+                                <option value="2">Administradora</option>
+                              </select>
+                            </td>
+                            <td>{u.total_citas}</td>
+                            <td>
+                              <span className={`dash-badge-estado ${u.activo ? 'estado-2' : 'estado-3'}`}>
+                                {u.activo ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className={`dash-act-btn ${u.activo ? 'cancel' : 'attend'}`}
+                                title={u.activo ? 'Desactivar usuario' : 'Reactivar usuario'}
+                                onClick={() => toggleEstadoUsuario(u)}
+                              >
+                                {u.activo ? '✕' : '↺'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2716,6 +3202,37 @@ function App() {
                   ))}
                 </div>
               )}
+            </section>
+          )}
+
+          {pagina === 'manual' && (
+            <section className="section about-page">
+              <div className="section-header">
+                <h2>📖 Manual de Usuario</h2>
+                <p>Guía paso a paso para clientas y administradora del salón Glam Nails Studio & Spa.</p>
+              </div>
+              <div className="info-grid">
+                <article className="info-card">
+                  <h3>1. Registro e Inicio de Sesión</h3>
+                  <p><strong>Clientas:</strong> Haz clic en <em>"Soy Clienta"</em> → <em>"Create an account"</em>. Ingresa nombre (solo letras), cédula (5-15 dígitos), teléfono, correo válido y contraseña (mínimo 6 caracteres).</p>
+                  <p><strong>Seguridad:</strong> Tras 5 intentos fallidos de inicio de sesión, el sistema cierra automáticamente el acceso durante 15 minutos.</p>
+                </article>
+                <article className="info-card">
+                  <h3>2. Cómo Reservar tu Cita</h3>
+                  <p>1) Elige hasta 2 servicios en <strong>Tratamientos</strong> (o un diseño en <strong>Diseños</strong>).<br />
+                  2) En <strong>Reservar</strong>, selecciona manicurista y fecha (desde hoy en adelante).<br />
+                  3) Toca una franja libre en el calendario interactivo.<br />
+                  4) Opcionalmente registra tu comprobante Nequi/Daviplata y confirma.</p>
+                </article>
+                <article className="info-card">
+                  <h3>3. Mis Citas (Autogestión)</h3>
+                  <p>En <strong>Mis Citas</strong> puedes descargar tu cita en calendario <code>.ics</code>, abrirla en Google Calendar, <strong>Reprogramar</strong> viendo las horas libres en el calendario o <strong>Cancelar</strong> para liberar el espacio.</p>
+                </article>
+                <article className="info-card">
+                  <h3>4. Panel de Administración</h3>
+                  <p>La <strong>Administradora</strong> accede desde <em>"Administradora"</em> al panel exclusivo con: <strong>Dashboard</strong> (resumen diario), <strong>Citas</strong> (vista Google Calendar y tabla), <strong>Servicios</strong> (CRUD), <strong>Manicuristas</strong> (equipo), <strong>Reportes</strong> (filtros por fecha/manicurista/servicio/clienta + CSV/PDF) y <strong>Usuarios</strong> (crear cuentas y asignar roles).</p>
+                </article>
+              </div>
             </section>
           )}
 
