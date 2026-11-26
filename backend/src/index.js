@@ -14,8 +14,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+app.set('trust proxy', 1);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Pool de conexión a MySQL (DB_* o variables nativas de Railway MYSQL*)
 export const pool = mysql.createPool({

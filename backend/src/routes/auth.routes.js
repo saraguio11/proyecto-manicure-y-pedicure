@@ -12,34 +12,49 @@ const intentosLogin = new Map();
 const MAX_INTENTOS = 5;
 const TIEMPO_BLOQUEO_MS = 15 * 60 * 1000; // 15 minutos
 
-// Expresión regular para validar formato seguro de correo
+// Expresión regular para validar formato seguro de correo, nombre, documento y teléfono
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NOMBRE_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{3,100}$/;
+const DOCUMENTO_REGEX = /^\d{5,15}$/;
+const TELEFONO_REGEX = /^\+?\d{7,15}$/;
 
 // ==========================================
 // REGISTRO DE CLIENTAS
 // ==========================================
 router.post('/registro', async (req, res) => {
   try {
-    let { nombre_completo, documento, telefono, correo, password, rol_id = 1 } = req.body;
+    let { nombre_completo, documento, telefono, correo, password } = req.body || {};
 
     // 1. Sanitización básica
-    nombre_completo = nombre_completo ? String(nombre_completo).trim() : '';
-    documento = documento ? String(documento).trim() : '';
-    telefono = telefono ? String(telefono).trim() : '';
-    correo = correo ? String(correo).trim().toLowerCase() : '';
-    password = password ? String(password) : '';
+    nombre_completo = typeof nombre_completo === 'string' ? nombre_completo.trim() : '';
+    documento = typeof documento === 'string' || typeof documento === 'number' ? String(documento).trim() : '';
+    telefono = typeof telefono === 'string' || typeof telefono === 'number' ? String(telefono).trim() : '';
+    correo = typeof correo === 'string' ? correo.trim().toLowerCase() : '';
+    password = typeof password === 'string' ? password : '';
 
-    // 2. Validación del lado del servidor
+    // 2. Validación estricta del lado del servidor
     if (!nombre_completo || !documento || !telefono || !correo || !password) {
       return res.status(400).json({ error: 'Todos los campos son estrictamente obligatorios' });
     }
 
-    if (!EMAIL_REGEX.test(correo)) {
+    if (!NOMBRE_REGEX.test(nombre_completo)) {
+      return res.status(400).json({ error: 'El nombre completo debe tener entre 3 y 100 letras sin números ni símbolos' });
+    }
+
+    if (!DOCUMENTO_REGEX.test(documento)) {
+      return res.status(400).json({ error: 'El documento debe contener solo números (entre 5 y 15 dígitos)' });
+    }
+
+    if (!TELEFONO_REGEX.test(telefono)) {
+      return res.status(400).json({ error: 'El teléfono debe ser un número válido de 7 a 15 dígitos' });
+    }
+
+    if (correo.length > 120 || !EMAIL_REGEX.test(correo)) {
       return res.status(400).json({ error: 'El formato de correo electrónico no es válido' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    if (password.length < 6 || password.length > 100) {
+      return res.status(400).json({ error: 'La contraseña debe tener entre 6 y 100 caracteres' });
     }
 
     // Seguridad: Prevenir escalada de privilegios (nadie puede registrarse directamente como admin)
@@ -90,29 +105,33 @@ router.post('/registro', async (req, res) => {
 // ==========================================
 router.post('/login', async (req, res) => {
   try {
-    let { correo, password } = req.body;
-    correo = correo ? String(correo).trim().toLowerCase() : '';
-    password = password ? String(password) : '';
+    let { correo, password } = req.body || {};
+    correo = typeof correo === 'string' ? correo.trim().toLowerCase() : '';
+    password = typeof password === 'string' ? password : '';
+
+    const ahora = Date.now();
+    const ipCliente = req.ip || req.socket?.remoteAddress || 'unknown';
+    const claveIp = `ip_${ipCliente}`;
+    const claveCorreo = correo ? `${correo}_${ipCliente}` : claveIp;
+
+    // Validar si la IP o la cuenta ya está bloqueada por exceder 5 intentos
+    const bloqueoActivo = verificarBloqueo(claveIp, ahora) || verificarBloqueo(claveCorreo, ahora);
+    if (bloqueoActivo) {
+      const minutosRestantes = Math.ceil((bloqueoActivo.bloqueadoHasta - ahora) / 60000);
+      return res.status(429).json({
+        error: `⛔ Login cerrado por seguridad (5 intentos fallidos). Inténtalo de nuevo en ${minutosRestantes} minuto(s).`,
+        bloqueado: true,
+        intentos_restantes: 0,
+        bloqueado_hasta: bloqueoActivo.bloqueadoHasta
+      });
+    }
 
     if (!correo || !password) {
       return res.status(400).json({ error: 'Por favor ingresa tu correo y contraseña' });
     }
 
-    const ahora = Date.now();
-    const claveIntento = `${correo}_${req.ip}`;
-    const estadoIntento = intentosLogin.get(claveIntento) || { intentos: 0, bloqueadoHasta: 0 };
-
-    // Validar si la cuenta/IP está bloqueada por exceder 5 intentos
-    if (estadoIntento.bloqueadoHasta > ahora) {
-      const minutosRestantes = Math.ceil((estadoIntento.bloqueadoHasta - ahora) / 60000);
-      return res.status(429).json({
-        error: `⛔ Demasiados intentos fallidos (5 de 5). Por seguridad, el acceso ha sido bloqueado temporalmente. Inténtalo de nuevo en ${minutosRestantes} minuto(s).`
-      });
-    }
-
-    // Si ya pasó el tiempo de bloqueo, resetear
-    if (estadoIntento.bloqueadoHasta !== 0 && estadoIntento.bloqueadoHasta <= ahora) {
-      intentosLogin.delete(claveIntento);
+    if (!EMAIL_REGEX.test(correo)) {
+      return res.status(400).json({ error: 'El formato de correo electrónico no es válido' });
     }
 
     // Consulta segura parametrizada (Prevención SQL Injection)
@@ -126,12 +145,19 @@ router.post('/login', async (req, res) => {
 
     // Si el usuario no existe o está inactivo
     if (usuarios.length === 0 || !usuarios[0].activo) {
-      registrarIntentoFallido(claveIntento);
-      const restantes = obtenerRestantes(claveIntento);
+      const { restantes, bloqueadoHasta } = registrarIntentoFallidoDual(claveIp, claveCorreo);
+      if (restantes === 0) {
+        return res.status(429).json({
+          error: '⛔ Has alcanzado el límite de 5 intentos fallidos. El login se ha cerrado por seguridad durante 15 minutos.',
+          bloqueado: true,
+          intentos_restantes: 0,
+          bloqueado_hasta: bloqueadoHasta
+        });
+      }
       return res.status(401).json({
-        error: restantes > 0 
-          ? `Credenciales inválidas. Te quedan ${restantes} intento(s) antes del bloqueo de seguridad.`
-          : '⛔ Has alcanzado el límite de 5 intentos fallidos. Acceso bloqueado por 15 minutos.'
+        error: `Credenciales inválidas. Te quedan ${restantes} intento(s) antes de cerrar el login.`,
+        bloqueado: false,
+        intentos_restantes: restantes
       });
     }
 
@@ -141,17 +167,25 @@ router.post('/login', async (req, res) => {
     const passwordValido = await bcrypt.compare(password, usuario.password_hash);
 
     if (!passwordValido) {
-      registrarIntentoFallido(claveIntento);
-      const restantes = obtenerRestantes(claveIntento);
+      const { restantes, bloqueadoHasta } = registrarIntentoFallidoDual(claveIp, claveCorreo);
+      if (restantes === 0) {
+        return res.status(429).json({
+          error: '⛔ Has alcanzado el límite de 5 intentos fallidos. El login se ha cerrado por seguridad durante 15 minutos.',
+          bloqueado: true,
+          intentos_restantes: 0,
+          bloqueado_hasta: bloqueadoHasta
+        });
+      }
       return res.status(401).json({
-        error: restantes > 0 
-          ? `Contraseña incorrecta. Te quedan ${restantes} intento(s) antes del bloqueo de seguridad.`
-          : '⛔ Has alcanzado el límite de 5 intentos fallidos. Acceso bloqueado por 15 minutos.'
+        error: `Contraseña incorrecta. Te quedan ${restantes} intento(s) antes de cerrar el login.`,
+        bloqueado: false,
+        intentos_restantes: restantes
       });
     }
 
     // Si el login fue exitoso: Limpiar intentos fallidos acumulados
-    intentosLogin.delete(claveIntento);
+    intentosLogin.delete(claveIp);
+    intentosLogin.delete(claveCorreo);
 
     // Generar Token JWT firmado
     const token = jwt.sign(
@@ -179,6 +213,16 @@ router.post('/login', async (req, res) => {
 });
 
 // Funciones auxiliares para manejo de intentos
+function verificarBloqueo(clave, ahora) {
+  const info = intentosLogin.get(clave);
+  if (!info) return null;
+  if (info.bloqueadoHasta > ahora) return info;
+  if (info.bloqueadoHasta !== 0 && info.bloqueadoHasta <= ahora) {
+    intentosLogin.delete(clave);
+  }
+  return null;
+}
+
 function registrarIntentoFallido(clave) {
   const ahora = Date.now();
   const info = intentosLogin.get(clave) || { intentos: 0, bloqueadoHasta: 0 };
@@ -188,13 +232,16 @@ function registrarIntentoFallido(clave) {
     info.bloqueadoHasta = ahora + TIEMPO_BLOQUEO_MS;
   }
   intentosLogin.set(clave, info);
+  return info;
 }
 
-function obtenerRestantes(clave) {
-  const info = intentosLogin.get(clave);
-  if (!info) return MAX_INTENTOS;
-  const rem = MAX_INTENTOS - info.intentos;
-  return rem > 0 ? rem : 0;
+function registrarIntentoFallidoDual(claveIp, claveCorreo) {
+  const infoIp = registrarIntentoFallido(claveIp);
+  const infoCorreo = claveCorreo !== claveIp ? registrarIntentoFallido(claveCorreo) : infoIp;
+  const maxIntentosUsados = Math.max(infoIp.intentos, infoCorreo.intentos);
+  const restantes = Math.max(0, MAX_INTENTOS - maxIntentosUsados);
+  const bloqueadoHasta = Math.max(infoIp.bloqueadoHasta, infoCorreo.bloqueadoHasta);
+  return { restantes, bloqueadoHasta };
 }
 
 export default router;

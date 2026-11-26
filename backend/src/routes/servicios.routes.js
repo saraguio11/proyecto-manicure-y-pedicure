@@ -47,28 +47,51 @@ router.get('/admin/all', verificarToken, soloAdmin, async (req, res) => {
   }
 });
 
+const esEnteroPositivo = (val) => Number.isInteger(Number(val)) && Number(val) > 0;
+const esUrlValida = (u) => !u || /^https?:\/\/.+/.test(u) || u.startsWith('/');
+
 // ─────────────────────────────────────────────
 // POST / — Crear servicio (solo admin)
 // ─────────────────────────────────────────────
 router.post('/', verificarToken, soloAdmin, async (req, res) => {
   try {
-    const { nombre, descripcion, duracion_min, precio, imagen_url, categoria } = req.body;
-    if (!nombre || !duracion_min || !precio) {
-      return res.status(400).json({ error: 'Nombre, duración y precio son obligatorios' });
+    const { nombre, descripcion, duracion_min, precio, imagen_url, categoria } = req.body || {};
+    const nombreLimpio = typeof nombre === 'string' ? nombre.trim() : '';
+    const descLimpia = typeof descripcion === 'string' ? descripcion.trim() : '';
+    const imgLimpia = typeof imagen_url === 'string' ? imagen_url.trim() : '';
+    const catLimpia = typeof categoria === 'string' ? categoria.trim() : '';
+    const durNum = Number(duracion_min);
+    const precioNum = Number(precio);
+
+    if (!nombreLimpio || nombreLimpio.length < 3 || nombreLimpio.length > 100) {
+      return res.status(400).json({ error: 'El nombre del servicio debe tener entre 3 y 100 caracteres' });
     }
-    if (Number(duracion_min) <= 0 || Number(precio) <= 0) {
-      return res.status(400).json({ error: 'La duración y precio deben ser mayores a 0' });
+    if (!Number.isInteger(durNum) || durNum < 10 || durNum > 480) {
+      return res.status(400).json({ error: 'La duración debe ser un número entero entre 10 y 480 minutos' });
     }
+    if (isNaN(precioNum) || precioNum < 1000 || precioNum > 10000000) {
+      return res.status(400).json({ error: 'El precio debe estar entre $1.000 y $10.000.000 COP' });
+    }
+    if (descLimpia.length > 500) {
+      return res.status(400).json({ error: 'La descripción no puede superar los 500 caracteres' });
+    }
+    if (catLimpia.length > 80) {
+      return res.status(400).json({ error: 'La categoría no puede superar los 80 caracteres' });
+    }
+    if (imgLimpia.length > 255 || !esUrlValida(imgLimpia)) {
+      return res.status(400).json({ error: 'La URL de imagen no es válida' });
+    }
+
     const [result] = await pool.execute(
       'INSERT INTO servicios (nombre, descripcion, duracion_min, precio, imagen_url, categoria) VALUES (?, ?, ?, ?, ?, ?)',
-      [nombre.trim(), descripcion?.trim() || null, Number(duracion_min), Number(precio), imagen_url?.trim() || null, categoria?.trim() || null]
+      [nombreLimpio, descLimpia || null, durNum, precioNum, imgLimpia || null, catLimpia || null]
     );
     res.status(201).json({ mensaje: 'Servicio creado exitosamente', id: result.insertId });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'Ya existe un servicio con ese nombre' });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno al crear el servicio' });
   }
 });
 
@@ -78,17 +101,40 @@ router.post('/', verificarToken, soloAdmin, async (req, res) => {
 router.put('/:id', verificarToken, soloAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, duracion_min, precio, imagen_url, categoria, activo } = req.body;
-    if (!nombre || !duracion_min || !precio) {
-      return res.status(400).json({ error: 'Nombre, duración y precio son obligatorios' });
+    if (!esEnteroPositivo(id)) {
+      return res.status(400).json({ error: 'Identificador de servicio inválido' });
     }
+    const { nombre, descripcion, duracion_min, precio, imagen_url, categoria, activo } = req.body || {};
+    const nombreLimpio = typeof nombre === 'string' ? nombre.trim() : '';
+    const descLimpia = typeof descripcion === 'string' ? descripcion.trim() : '';
+    const imgLimpia = typeof imagen_url === 'string' ? imagen_url.trim() : '';
+    const catLimpia = typeof categoria === 'string' ? categoria.trim() : '';
+    const durNum = Number(duracion_min);
+    const precioNum = Number(precio);
+
+    if (!nombreLimpio || nombreLimpio.length < 3 || nombreLimpio.length > 100) {
+      return res.status(400).json({ error: 'El nombre del servicio debe tener entre 3 y 100 caracteres' });
+    }
+    if (!Number.isInteger(durNum) || durNum < 10 || durNum > 480) {
+      return res.status(400).json({ error: 'La duración debe ser un número entero entre 10 y 480 minutos' });
+    }
+    if (isNaN(precioNum) || precioNum < 1000 || precioNum > 10000000) {
+      return res.status(400).json({ error: 'El precio debe estar entre $1.000 y $10.000.000 COP' });
+    }
+    if (descLimpia.length > 500 || catLimpia.length > 80) {
+      return res.status(400).json({ error: 'Descripción o categoría exceden la longitud permitida' });
+    }
+    if (imgLimpia.length > 255 || !esUrlValida(imgLimpia)) {
+      return res.status(400).json({ error: 'La URL de imagen no es válida' });
+    }
+
     await pool.execute(
       'UPDATE servicios SET nombre=?, descripcion=?, duracion_min=?, precio=?, imagen_url=?, categoria=?, activo=? WHERE id=?',
-      [nombre.trim(), descripcion?.trim() || null, Number(duracion_min), Number(precio), imagen_url?.trim() || null, categoria?.trim() || null, activo !== undefined ? (activo ? 1 : 0) : 1, Number(id)]
+      [nombreLimpio, descLimpia || null, durNum, precioNum, imgLimpia || null, catLimpia || null, activo !== undefined ? (activo ? 1 : 0) : 1, Number(id)]
     );
     res.json({ mensaje: 'Servicio actualizado exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Error interno al actualizar el servicio' });
   }
 });
 

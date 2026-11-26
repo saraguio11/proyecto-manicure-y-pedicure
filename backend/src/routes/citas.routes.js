@@ -4,14 +4,19 @@ import { verificarToken, soloAdmin } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
+const FECHA_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+const esEnteroPositivo = (val) => Number.isInteger(Number(val)) && Number(val) > 0;
+const fechaHoyColombia = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+
 // ==========================================
 // CONSULTAR HORARIOS OCUPADOS / DISPONIBLES EN UNA FECHA
 // ==========================================
 router.get('/disponibilidad', async (req, res) => {
   try {
     const { fecha, manicurista_id } = req.query;
-    if (!fecha) {
-      return res.status(400).json({ error: 'La fecha es obligatoria' });
+    if (!fecha || !FECHA_REGEX.test(String(fecha))) {
+      return res.status(400).json({ error: 'La fecha es obligatoria y debe tener formato YYYY-MM-DD' });
     }
 
     let query = `
@@ -144,7 +149,7 @@ router.patch('/:id/estado', verificarToken, soloAdmin, async (req, res) => {
     const { id } = req.params;
     const { estado_id, estado_pago, manicurista_id, comprobante_pago, monto_anticipo } = req.body;
 
-    if (!id || isNaN(Number(id))) {
+    if (!id || !esEnteroPositivo(id)) {
       return res.status(400).json({ error: 'Identificador de cita inválido' });
     }
 
@@ -179,8 +184,12 @@ router.patch('/:id/estado', verificarToken, soloAdmin, async (req, res) => {
     }
 
     if (monto_anticipo !== undefined) {
+      const numAnticipo = Number(monto_anticipo);
+      if (isNaN(numAnticipo) || numAnticipo < 0 || numAnticipo > 10000000) {
+        return res.status(400).json({ error: 'El monto de anticipo no es válido' });
+      }
       updates.push('monto_anticipo = ?');
-      params.push(monto_anticipo ? Number(monto_anticipo) : 0);
+      params.push(numAnticipo);
     }
 
     if (updates.length === 0) {
@@ -203,6 +212,9 @@ router.patch('/:id/estado', verificarToken, soloAdmin, async (req, res) => {
 router.patch('/:id/cancelar-cliente', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
+    if (!esEnteroPositivo(id)) {
+      return res.status(400).json({ error: 'Identificador de cita inválido' });
+    }
     const usuario_id = req.usuario.id;
     const esAdmin = req.usuario.rol_id === 2 || req.usuario.rol === 'Administradora';
 
@@ -234,14 +246,20 @@ router.patch('/:id/cancelar-cliente', verificarToken, async (req, res) => {
 router.patch('/:id/reprogramar', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { fecha, hora_inicio } = req.body;
+    if (!esEnteroPositivo(id)) {
+      return res.status(400).json({ error: 'Identificador de cita inválido' });
+    }
+    const { fecha, hora_inicio } = req.body || {};
     const usuario_id = req.usuario.id;
     const esAdmin = req.usuario.rol_id === 2 || req.usuario.rol === 'Administradora';
 
-    if (!fecha || !hora_inicio) {
-      return res.status(400).json({ error: 'La nueva fecha y hora son obligatorias' });
+    if (!fecha || !FECHA_REGEX.test(String(fecha))) {
+      return res.status(400).json({ error: 'La nueva fecha es obligatoria y debe tener formato YYYY-MM-DD' });
     }
-    const fechaActual = new Date().toISOString().split('T')[0];
+    if (!hora_inicio || !HORA_REGEX.test(String(hora_inicio))) {
+      return res.status(400).json({ error: 'El formato de la nueva hora no es válido (HH:MM)' });
+    }
+    const fechaActual = fechaHoyColombia();
     if (fecha < fechaActual) {
       return res.status(400).json({ error: 'No es posible reprogramar a una fecha pasada' });
     }
@@ -300,16 +318,25 @@ router.patch('/:id/reprogramar', verificarToken, async (req, res) => {
 // ==========================================
 router.post('/', verificarToken, async (req, res) => {
   try {
-    const { servicios_ids, servicio_id, manicurista_id, fecha, hora_inicio, observacion, comprobante_pago, monto_anticipo } = req.body;
+    const { servicios_ids, servicio_id, manicurista_id, fecha, hora_inicio, observacion, comprobante_pago, monto_anticipo } = req.body || {};
     const usuario_id = req.usuario.id;
 
     // Acepta arreglo de servicios o un único servicio
-    const listaIds = Array.isArray(servicios_ids) && servicios_ids.length > 0 
+    const rawIds = Array.isArray(servicios_ids) && servicios_ids.length > 0 
       ? servicios_ids 
       : (servicio_id ? [servicio_id] : []);
+    const listaIds = [...new Set(rawIds.map(Number).filter(esEnteroPositivo))];
 
     if (listaIds.length === 0 || !fecha || !hora_inicio) {
-      return res.status(400).json({ error: 'Por favor selecciona al menos un servicio, fecha y hora de atención' });
+      return res.status(400).json({ error: 'Por favor selecciona al menos un servicio válido, fecha y hora de atención' });
+    }
+
+    if (!FECHA_REGEX.test(String(fecha))) {
+      return res.status(400).json({ error: 'El formato de la fecha debe ser YYYY-MM-DD' });
+    }
+
+    if (!HORA_REGEX.test(String(hora_inicio))) {
+      return res.status(400).json({ error: 'El formato de la hora de inicio no es válido' });
     }
 
     // Regla de negocio: Máximo 2 servicios por sesión
@@ -317,8 +344,16 @@ router.post('/', verificarToken, async (req, res) => {
       return res.status(400).json({ error: 'Solo se permite un máximo de 2 servicios por cita (ej. Manicure + Pedicure)' });
     }
 
-    // 1. Validar no fecha pasada
-    const fechaActual = new Date().toISOString().split('T')[0];
+    if (observacion && String(observacion).trim().length > 500) {
+      return res.status(400).json({ error: 'La observación no puede superar los 500 caracteres' });
+    }
+
+    if (comprobante_pago && String(comprobante_pago).trim().length > 120) {
+      return res.status(400).json({ error: 'La referencia de comprobante es demasiado larga' });
+    }
+
+    // 1. Validar no fecha pasada (hora Colombia)
+    const fechaActual = fechaHoyColombia();
     if (fecha < fechaActual) {
       return res.status(400).json({ error: 'No es posible agendar citas en fechas anteriores a hoy' });
     }

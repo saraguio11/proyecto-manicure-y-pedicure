@@ -170,6 +170,19 @@ function App() {
   });
   const [authError, setAuthError] = useState('');
   const [authCargando, setAuthCargando] = useState(false);
+  const [loginBloqueadoHasta, setLoginBloqueadoHasta] = useState(() => {
+    const guardado = Number(localStorage.getItem('login_bloqueado_hasta') || 0);
+    if (guardado > Date.now()) return guardado;
+    localStorage.removeItem('login_bloqueado_hasta');
+    return 0;
+  });
+
+  // Expresiones de validación reutilizables (sincronizadas con el servidor)
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const NOMBRE_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{3,100}$/;
+  const DOCUMENTO_REGEX = /^\d{5,15}$/;
+  const TELEFONO_REGEX = /^\+?\d{7,15}$/;
+  const esUrlValida = (u) => !u || /^https?:\/\/.+/.test(u.trim()) || u.trim().startsWith('/');
 
   const [alerta, setAlerta] = useState(null);
   const [pagina, setPagina] = useState('inicio');
@@ -799,8 +812,23 @@ function App() {
 
   const guardarServicio = async (e) => {
     e.preventDefault();
-    if (!formServicio.nombre.trim() || !formServicio.precio || !formServicio.duracion_min) {
-      return mostrarAlerta('Nombre, precio y duración son obligatorios', 'error');
+    const nombreLimpio = formServicio.nombre.trim();
+    const durNum = Number(formServicio.duracion_min);
+    const precioNum = Number(formServicio.precio);
+    if (nombreLimpio.length < 3 || nombreLimpio.length > 100) {
+      return mostrarAlerta('El nombre del servicio debe tener entre 3 y 100 caracteres', 'error');
+    }
+    if (!Number.isInteger(durNum) || durNum < 10 || durNum > 480) {
+      return mostrarAlerta('La duración debe ser un número entero entre 10 y 480 minutos', 'error');
+    }
+    if (isNaN(precioNum) || precioNum < 1000 || precioNum > 10000000) {
+      return mostrarAlerta('El precio debe estar entre $1.000 y $10.000.000 COP', 'error');
+    }
+    if (formServicio.descripcion.trim().length > 500) {
+      return mostrarAlerta('La descripción no puede superar los 500 caracteres', 'error');
+    }
+    if (!esUrlValida(formServicio.imagen_url)) {
+      return mostrarAlerta('La URL de la imagen debe iniciar por https://, http:// o /', 'error');
     }
     setGuardandoServicio(true);
     try {
@@ -853,7 +881,16 @@ function App() {
 
   const guardarManicurista = async (e) => {
     e.preventDefault();
-    if (!formManicurista.nombre.trim()) return mostrarAlerta('El nombre es obligatorio', 'error');
+    const nombreLimpio = formManicurista.nombre.trim();
+    if (!NOMBRE_REGEX.test(nombreLimpio)) {
+      return mostrarAlerta('El nombre debe tener entre 3 y 100 letras sin números ni símbolos', 'error');
+    }
+    if (formManicurista.especialidad.trim().length > 150) {
+      return mostrarAlerta('La especialidad no puede superar los 150 caracteres', 'error');
+    }
+    if (!esUrlValida(formManicurista.foto_url)) {
+      return mostrarAlerta('La URL de la foto debe iniciar por https://, http:// o /', 'error');
+    }
     setGuardandoManicurista(true);
     try {
       const esEdicion = modalManicurista && modalManicurista !== 'nuevo';
@@ -918,11 +955,36 @@ function App() {
     e.preventDefault();
     setAuthError('');
 
-    if (!authForm.correo.includes('@')) {
-      return setAuthError('Por favor ingresa un correo válido');
-    }
-    if (authForm.password.length < 6) {
-      return setAuthError('La contraseña debe tener mínimo 6 caracteres');
+    const correoLimpio = authForm.correo.trim().toLowerCase();
+
+    if (tipoModal === 'login_cliente' || tipoModal === 'login_admin') {
+      if (loginBloqueadoHasta > Date.now()) {
+        const minRest = Math.ceil((loginBloqueadoHasta - Date.now()) / 60000);
+        setTipoModal(null);
+        return mostrarAlerta(`⛔ Login cerrado por seguridad (5 intentos fallidos). Intenta en ${minRest} minuto(s).`, 'error');
+      }
+      if (!EMAIL_REGEX.test(correoLimpio)) {
+        return setAuthError('Por favor ingresa un correo electrónico válido (ej: nombre@correo.com)');
+      }
+      if (!authForm.password) {
+        return setAuthError('Por favor ingresa tu contraseña');
+      }
+    } else if (tipoModal === 'registro_cliente') {
+      if (!NOMBRE_REGEX.test(authForm.nombre_completo.trim())) {
+        return setAuthError('El nombre completo debe tener entre 3 y 100 letras sin números ni símbolos');
+      }
+      if (!DOCUMENTO_REGEX.test(authForm.documento.trim())) {
+        return setAuthError('El documento debe contener solo números (entre 5 y 15 dígitos)');
+      }
+      if (!TELEFONO_REGEX.test(authForm.telefono.trim())) {
+        return setAuthError('El teléfono debe ser numérico válido (7 a 15 dígitos)');
+      }
+      if (correoLimpio.length > 120 || !EMAIL_REGEX.test(correoLimpio)) {
+        return setAuthError('Por favor ingresa un correo electrónico válido');
+      }
+      if (authForm.password.length < 6 || authForm.password.length > 100) {
+        return setAuthError('La contraseña debe tener entre 6 y 100 caracteres');
+      }
     }
 
     setAuthCargando(true);
@@ -932,11 +994,23 @@ function App() {
         const res = await fetch(`${API_BASE}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ correo: authForm.correo, password: authForm.password })
+          body: JSON.stringify({ correo: correoLimpio, password: authForm.password })
         });
         const data = await res.json();
 
         if (!res.ok) {
+          if (res.status === 429 || data.bloqueado) {
+            const hasta = data.bloqueado_hasta || (Date.now() + 15 * 60 * 1000);
+            setLoginBloqueadoHasta(hasta);
+            localStorage.setItem('login_bloqueado_hasta', String(hasta));
+            setAuthForm(prev => ({ ...prev, password: '' }));
+            setTipoModal(null);
+            mostrarAlerta(
+              data.error || '⛔ Has alcanzado 5 intentos fallidos. El login se ha cerrado por seguridad durante 15 minutos.',
+              'error'
+            );
+            return;
+          }
           return setAuthError(data.error || 'Credenciales inválidas');
         }
 
@@ -944,18 +1018,16 @@ function App() {
           return setAuthError('Acceso denegado: Esta cuenta no posee permisos de Administradora');
         }
 
+        setLoginBloqueadoHasta(0);
+        localStorage.removeItem('login_bloqueado_hasta');
         guardarSesion(data.usuario, data.token);
         setTipoModal(null);
         mostrarAlerta(`¡Bienvenida, ${data.usuario.nombre_completo || data.usuario.nombre}!`, 'success');
       } else if (tipoModal === 'registro_cliente') {
-        if (!authForm.nombre_completo.trim() || !authForm.documento.trim() || !authForm.telefono.trim()) {
-          return setAuthError('Por favor llena todos los datos');
-        }
-
         const res = await fetch(`${API_BASE}/auth/registro`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(authForm)
+          body: JSON.stringify({ ...authForm, correo: correoLimpio })
         });
         const data = await res.json();
 
@@ -1011,6 +1083,15 @@ function App() {
     }
     if (formReserva.fecha < fechaHoy) {
       return mostrarAlerta('No puedes agendar citas en fechas pasadas', 'error');
+    }
+    if (!formReserva.hora_inicio) {
+      return mostrarAlerta('Debes seleccionar un horario disponible en el calendario', 'error');
+    }
+    if (formReserva.observacion && formReserva.observacion.trim().length > 500) {
+      return mostrarAlerta('La nota u observación no puede superar los 500 caracteres', 'error');
+    }
+    if (formReserva.comprobante_pago && formReserva.comprobante_pago.trim().length > 0 && formReserva.comprobante_pago.trim().length < 4) {
+      return mostrarAlerta('La referencia del comprobante debe tener al menos 4 caracteres', 'error');
     }
 
     setReservaCargando(true);
@@ -1744,7 +1825,7 @@ function App() {
                         <h3>{modalServicio === 'nuevo' ? '✦ Nuevo Servicio' : '✎ Editar Servicio'}</h3>
                         <button className="dash-modal-close" onClick={cerrarFormServicio}>✕</button>
                       </div>
-                      <form className="dash-modal-form" onSubmit={guardarServicio}>
+                      <form className="dash-modal-form" onSubmit={guardarServicio} noValidate>
                         <div className="dash-form-row">
                           <div className="dash-form-group">
                             <label>Nombre del servicio *</label>
@@ -1860,7 +1941,7 @@ function App() {
                         <h3>{modalManicurista === 'nuevo' ? '✦ Nueva Manicurista' : '✎ Editar Manicurista'}</h3>
                         <button className="dash-modal-close" onClick={cerrarFormManicurista}>✕</button>
                       </div>
-                      <form className="dash-modal-form" onSubmit={guardarManicurista}>
+                      <form className="dash-modal-form" onSubmit={guardarManicurista} noValidate>
                         <div className="dash-form-group">
                           <label>Nombre completo *</label>
                           <input type="text" value={formManicurista.nombre} onChange={e => setFormManicurista({...formManicurista, nombre: e.target.value})} placeholder="Ej: María González" required />
@@ -2763,13 +2844,20 @@ function App() {
                   <h2 className="desert-title">Admin Login</h2>
                   <p className="desert-subtitle">Área exclusiva para administración</p>
 
-                  <form onSubmit={handleAuthSubmit} className="desert-form">
+                  {loginBloqueadoHasta > Date.now() ? (
+                    <div className="desert-error">
+                      ⛔ Login cerrado temporalmente por superar 5 intentos fallidos. Intenta de nuevo en{' '}
+                      {Math.ceil((loginBloqueadoHasta - Date.now()) / 60000)} minuto(s).
+                    </div>
+                  ) : (
+                  <form onSubmit={handleAuthSubmit} className="desert-form" noValidate>
                     <div className="desert-input-group">
                       <label>Email</label>
                       <div className="desert-input-wrap">
                         <input
                           type="email"
                           required
+                          maxLength={120}
                           value={authForm.correo}
                           onChange={(e) => setAuthForm({ ...authForm, correo: e.target.value })}
                         />
@@ -2783,6 +2871,7 @@ function App() {
                         <input
                           type={verPassword ? 'text' : 'password'}
                           required
+                          maxLength={100}
                           value={authForm.password}
                           onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
                         />
@@ -2803,6 +2892,7 @@ function App() {
                       {authCargando ? 'Validando...' : 'Login'}
                     </button>
                   </form>
+                  )}
                 </>
               )}
 
@@ -2810,13 +2900,20 @@ function App() {
                 <>
                   <h2 className="desert-title">Login</h2>
                   
-                  <form onSubmit={handleAuthSubmit} className="desert-form">
+                  {loginBloqueadoHasta > Date.now() ? (
+                    <div className="desert-error">
+                      ⛔ Login cerrado temporalmente por superar 5 intentos fallidos. Intenta de nuevo en{' '}
+                      {Math.ceil((loginBloqueadoHasta - Date.now()) / 60000)} minuto(s).
+                    </div>
+                  ) : (
+                  <form onSubmit={handleAuthSubmit} className="desert-form" noValidate>
                     <div className="desert-input-group">
                       <label>Email</label>
                       <div className="desert-input-wrap">
                         <input
                           type="email"
                           required
+                          maxLength={120}
                           value={authForm.correo}
                           onChange={(e) => setAuthForm({ ...authForm, correo: e.target.value })}
                         />
@@ -2830,6 +2927,7 @@ function App() {
                         <input
                           type={verPassword ? 'text' : 'password'}
                           required
+                          maxLength={100}
                           value={authForm.password}
                           onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
                         />
@@ -2867,6 +2965,7 @@ function App() {
                       </button>
                     </div>
                   </form>
+                  )}
                 </>
               )}
 
@@ -2874,13 +2973,16 @@ function App() {
                 <>
                   <h2 className="desert-title">Sign Up</h2>
                   
-                  <form onSubmit={handleAuthSubmit} className="desert-form">
+                  <form onSubmit={handleAuthSubmit} className="desert-form" noValidate>
                     <div className="desert-input-group">
                       <label>Full Name</label>
                       <div className="desert-input-wrap">
                         <input
                           type="text"
                           required
+                          minLength={3}
+                          maxLength={100}
+                          placeholder="Solo letras y espacios"
                           value={authForm.nombre_completo}
                           onChange={(e) => setAuthForm({ ...authForm, nombre_completo: e.target.value })}
                         />
@@ -2893,7 +2995,11 @@ function App() {
                       <div className="desert-input-wrap">
                         <input
                           type="text"
+                          inputMode="numeric"
                           required
+                          minLength={5}
+                          maxLength={15}
+                          placeholder="Solo números (5-15 dígitos)"
                           value={authForm.documento}
                           onChange={(e) => setAuthForm({ ...authForm, documento: e.target.value })}
                         />
@@ -2906,7 +3012,11 @@ function App() {
                       <div className="desert-input-wrap">
                         <input
                           type="tel"
+                          inputMode="numeric"
                           required
+                          minLength={7}
+                          maxLength={15}
+                          placeholder="Ej: 3001234567"
                           value={authForm.telefono}
                           onChange={(e) => setAuthForm({ ...authForm, telefono: e.target.value })}
                         />
@@ -2920,6 +3030,8 @@ function App() {
                         <input
                           type="email"
                           required
+                          maxLength={120}
+                          placeholder="correo@ejemplo.com"
                           value={authForm.correo}
                           onChange={(e) => setAuthForm({ ...authForm, correo: e.target.value })}
                         />
@@ -2933,6 +3045,8 @@ function App() {
                         <input
                           type={verPassword ? 'text' : 'password'}
                           required
+                          minLength={6}
+                          maxLength={100}
                           placeholder="Mínimo 6 caracteres"
                           value={authForm.password}
                           onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
