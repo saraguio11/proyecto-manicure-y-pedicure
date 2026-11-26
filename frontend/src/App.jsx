@@ -1361,7 +1361,6 @@ function App() {
         { id: 'tratamientos', etiqueta: 'Tratamientos', icono: '✧' },
         { id: 'disenos', etiqueta: 'Diseños', icono: '✨' },
         { id: 'admin', etiqueta: 'Panel', icono: '☰' },
-        { id: 'manual', etiqueta: 'Manual', icono: '📖' },
         { id: 'contacto', etiqueta: 'Contacto', icono: '☎' }
       ]
     : [
@@ -1371,7 +1370,6 @@ function App() {
         { id: 'disenos', etiqueta: 'Diseños', icono: '✨' },
         { id: 'reservar', etiqueta: 'Reservar', icono: '◷' },
         ...(usuario ? [{ id: 'citas', etiqueta: 'Mis Citas', icono: '☑' }] : []),
-        { id: 'manual', etiqueta: 'Manual', icono: '📖' },
         { id: 'contacto', etiqueta: 'Contacto', icono: '☎' }
       ];
 
@@ -3202,37 +3200,6 @@ function App() {
                   ))}
                 </div>
               )}
-            </section>
-          )}
-
-          {pagina === 'manual' && (
-            <section className="section about-page">
-              <div className="section-header">
-                <h2>📖 Manual de Usuario</h2>
-                <p>Guía paso a paso para clientas y administradora del salón Glam Nails Studio & Spa.</p>
-              </div>
-              <div className="info-grid">
-                <article className="info-card">
-                  <h3>1. Registro e Inicio de Sesión</h3>
-                  <p><strong>Clientas:</strong> Haz clic en <em>"Soy Clienta"</em> → <em>"Create an account"</em>. Ingresa nombre (solo letras), cédula (5-15 dígitos), teléfono, correo válido y contraseña (mínimo 6 caracteres).</p>
-                  <p><strong>Seguridad:</strong> Tras 5 intentos fallidos de inicio de sesión, el sistema cierra automáticamente el acceso durante 15 minutos.</p>
-                </article>
-                <article className="info-card">
-                  <h3>2. Cómo Reservar tu Cita</h3>
-                  <p>1) Elige hasta 2 servicios en <strong>Tratamientos</strong> (o un diseño en <strong>Diseños</strong>).<br />
-                  2) En <strong>Reservar</strong>, selecciona manicurista y fecha (desde hoy en adelante).<br />
-                  3) Toca una franja libre en el calendario interactivo.<br />
-                  4) Opcionalmente registra tu comprobante Nequi/Daviplata y confirma.</p>
-                </article>
-                <article className="info-card">
-                  <h3>3. Mis Citas (Autogestión)</h3>
-                  <p>En <strong>Mis Citas</strong> puedes descargar tu cita en calendario <code>.ics</code>, abrirla en Google Calendar, <strong>Reprogramar</strong> viendo las horas libres en el calendario o <strong>Cancelar</strong> para liberar el espacio.</p>
-                </article>
-                <article className="info-card">
-                  <h3>4. Panel de Administración</h3>
-                  <p>La <strong>Administradora</strong> accede desde <em>"Administradora"</em> al panel exclusivo con: <strong>Dashboard</strong> (resumen diario), <strong>Citas</strong> (vista Google Calendar y tabla), <strong>Servicios</strong> (CRUD), <strong>Manicuristas</strong> (equipo), <strong>Reportes</strong> (filtros por fecha/manicurista/servicio/clienta + CSV/PDF) y <strong>Usuarios</strong> (crear cuentas y asignar roles).</p>
-                </article>
-              </div>
             </section>
           )}
 
